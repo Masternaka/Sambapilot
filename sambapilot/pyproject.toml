@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sambapilot"
+version = "0.1.0.dev0"
+description = "Gestionnaire Samba pour Omarchy — socle de diagnostic"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+sambapilot = "sambapilot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sambapilot*"]
