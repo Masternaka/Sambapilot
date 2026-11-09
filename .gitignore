@@ -36,3 +36,6 @@ dist/
 .venv/
 venv/
 po/*.mo
+
+# Artefacts produits par la CI
+/artifacts/

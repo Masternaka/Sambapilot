@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SambaPilot
+Comment=Diagnostic et préparation Samba — interface de démonstration
+Exec=sambapilot gui --demo
+Icon=folder-remote
+Terminal=false
+Categories=System;Utility;
+StartupNotify=true
