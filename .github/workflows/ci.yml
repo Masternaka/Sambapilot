@@ -35,7 +35,7 @@ jobs:
           python -B scripts/run_tests.py --report artifacts/verification/python.json
       - name: Conserver le bilan des tests Python
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sambapilot-tests-python-${{ matrix.python }}-${{ github.sha }}-${{ github.run_attempt }}
           path: artifacts/verification/python.json
@@ -68,7 +68,7 @@ jobs:
           xvfb-run -a dbus-run-session -- /usr/bin/python3 -B scripts/run_tests.py --require-native --report artifacts/verification/native.json
       - name: Conserver le bilan des tests natifs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sambapilot-tests-native-${{ github.sha }}-${{ github.run_attempt }}
           path: artifacts/verification/native.json
@@ -107,7 +107,7 @@ jobs:
           sha256sum *.whl *.tar.gz COMMIT.txt > SHA256SUMS
       - name: Conserver les archives Python vérifiées
         id: upload_python
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sambapilot-python-${{ github.sha }}-${{ github.run_attempt }}
           path: dist/
@@ -129,7 +129,7 @@ jobs:
           persist-credentials: false
       - name: Préparer les outils dans le conteneur temporaire
         run: pacman -Syu --noconfirm --needed python-build python-installer python-setuptools python-wheel gtk4 python-gobject git desktop-file-utils
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.package.outputs.python_artifact_id }}
           merge-multiple: true
@@ -162,7 +162,7 @@ jobs:
           cd artifacts/arch
           sha256sum *.pkg.tar.zst PKGBUILD COMMIT.txt > SHA256SUMS
       - name: Conserver le paquet Arch vérifié
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sambapilot-arch-${{ github.sha }}-${{ github.run_attempt }}
           path: artifacts/arch/

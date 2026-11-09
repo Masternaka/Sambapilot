@@ -60,7 +60,7 @@ Le contrôle Samba utilise uniquement des configurations fictives et des fichier
 
 Le programme `testparm` peut tenir compte de chemins et de valeurs compilés dans Samba. Ses répertoires système par défaut doivent donc déjà exister dans l’environnement de test. Un refus de ce programme reste un échec à examiner ; ces tests ne créent pas ces répertoires localement pour contourner l’erreur.
 
-Les tests GTK demandent une session graphique accessible. En CI, Xvfb fournit un affichage X11 virtuel avec un rendu logiciel ; cela ne valide pas Wayland, Hyprland, le thème Omarchy, les interactions visuelles ou l’accessibilité complète.
+Les tests GTK demandent une session graphique accessible. Chaque test enregistre une application avec un identifiant unique : `NON_UNIQUE` seul ne prévient pas les collisions de chemins D-Bus dans un même processus. Les nettoyages sont enregistrés dès la création des ressources, y compris si la préparation du test échoue ensuite. En CI, Xvfb fournit un affichage X11 virtuel avec un rendu logiciel ; cela ne valide pas Wayland, Hyprland, le thème Omarchy, les interactions visuelles ou l’accessibilité complète.
 
 ## Vérification de distribution
 
@@ -82,4 +82,6 @@ Après une exécution CI réussie, vérifier dans une session Omarchy autorisée
 
 Références utilisées pour préparer le workflow : [setup-python](https://github.com/actions/setup-python/tree/v6), [checkout](https://github.com/actions/checkout/tree/v5), [GTK4 dans Ubuntu 24.04](https://packages.ubuntu.com/noble/gir1.2-gtk-4.0), [outils Samba](https://packages.ubuntu.com/noble/samba-common-bin), [construction Python](https://build.pypa.io/en/stable/explanation/how-it-works.html) et [contenu des distributions setuptools](https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html).
 
-Références pour les relances : [sorties conservées des jobs non relancés](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs), [téléchargement par identifiant](https://github.com/actions/download-artifact/blob/v4/action.yml) et [sortie artifact-id](https://github.com/actions/upload-artifact/blob/v4/action.yml).
+Les actions de transfert utilisent `upload-artifact@v7` et `download-artifact@v8`, toutes deux sur Node.js 24. Le téléchargement par identifiant et la conservation des artefacts restent en place.
+
+Références pour les relances : [sorties conservées des jobs non relancés](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs), [téléchargement par identifiant](https://github.com/actions/download-artifact/blob/v8/action.yml) et [sortie artifact-id](https://github.com/actions/upload-artifact/blob/v7/action.yml).

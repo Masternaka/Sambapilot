@@ -40,6 +40,14 @@ Les tests ordinaires sont découverts depuis `tests/`. Les nouveaux fichiers ne 
 
 ## Garanties préparées dans la CI
 
+### Échec natif observé et correction préparée
+
+Le journal GitHub fourni par l’utilisateur montre 304 tests exécutés, dont 33 erreurs GTK. Le premier test GTK réussit, ainsi que les quatre tests Samba réels. Les 33 erreurs suivantes surviennent dans `setUp`, lors de `app.register(None)` : l’interface `org.gtk.Application` est déjà exportée au chemin `/io/github/sambapilot/Tests`. Elles empêchent les scénarios concernés de commencer et ne constituent pas 33 régressions fonctionnelles distinctes.
+
+La préparation GTK attribue maintenant un identifiant unique à chaque application de test et enregistre ses nettoyages avec `addCleanup`, même si la préparation échoue ensuite. Les actions d’artefacts passent à `upload-artifact@v7` et `download-artifact@v8`, utilisant Node.js 24, pour traiter séparément les avertissements de dépréciation. La correction reste à confirmer par une nouvelle exécution native GitHub ; les tests locaux continuent d’ignorer les 38 tests natifs.
+
+### Organisation du workflow
+
 Le workflow comporte quatre jobs :
 
 1. **Python** : syntaxe, liens, démonstrations et suite sur Python 3.9, 3.12 et 3.14.
@@ -76,7 +84,7 @@ La restauration du laboratoire est temporaire et ne comporte pas le verrouillage
 ## Prochaine reprise
 
 1. Vérifier `git status` et préparer une publication incluant la réorganisation, le code, les scripts, les tests, le conditionnement et les documents, après autorisation explicite de commit/push.
-2. Examiner le premier run GitHub et corriger les échecs réels avant d’annoncer la construction validée. Ne pas contourner un échec natif en ignorant les tests concernés.
+2. Après publication autorisée de la correction, examiner le nouveau run GitHub : les 34 tests GTK et les 4 tests Samba doivent tous réussir avant d’annoncer la construction validée. Ne pas contourner un échec natif en ignorant les tests concernés.
 3. Quand Omarchy sera disponible, effectuer la recette courte avec les dépendances déjà présentes ; planifier séparément toute installation nécessaire.
 
 Aucun commit, push, déploiement, installation locale, création de signature ou activation pacman n’est réalisé dans cette stabilisation.

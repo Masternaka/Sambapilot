@@ -2,6 +2,7 @@
 
 import os
 import unittest
+from uuid import uuid4
 
 
 @unittest.skipUnless(os.environ.get("SAMBAPILOT_GTK_TESTS") == "1",
@@ -15,14 +16,15 @@ class GtkIntegrationTests(unittest.TestCase):
         from gi.repository import Gio
         from sambapilot.gtk_app import SambaPilotWindow
         from sambapilot.presentation import DemoViewModel
-        self.app = self.Gtk.Application(application_id="io.github.sambapilot.Tests",
-                                        flags=Gio.ApplicationFlags.NON_UNIQUE)
-        self.app.register(None)
+        # NON_UNIQUE autorise plusieurs instances, mais n'isole pas leurs
+        # chemins d'objets sur la connexion D-Bus partagée du processus.
+        self.app = self.Gtk.Application(
+            application_id="io.github.sambapilot.Tests.t" + uuid4().hex,
+            flags=Gio.ApplicationFlags.NON_UNIQUE)
+        self.addCleanup(self.app.quit)
+        self.assertTrue(self.app.register(None))
         self.window = SambaPilotWindow(self.app, DemoViewModel.create())
-
-    def tearDown(self):
-        self.window.destroy()
-        self.app.quit()
+        self.addCleanup(self.window.destroy)
 
     def test_window_builds_all_pages_and_initial_selection(self):
         for name in ("dashboard", "installation", "shares", "access", "prepare", "configuration", "firewall", "maintenance"):
