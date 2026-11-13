@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 
 from .diagnostic import Observation, Service
 from .access import AccessReport, FileAccess, Share, User, build_matrix
+from .distributions import PROFILES
 
 
 SCENARIOS = ("fresh", "configured", "restricted")
@@ -47,19 +48,19 @@ def access_demo() -> AccessReport:
 class DemoProbe:
     mode = "demo"
 
-    def __init__(self, scenario: str = "configured") -> None:
+    def __init__(self, scenario: str = "configured", distribution: str = "arch") -> None:
         if scenario not in SCENARIOS:
             raise ValueError("Scénario inconnu.")
         self.scenario = scenario
+        if distribution not in PROFILES:
+            raise ValueError("Distribution fictive inconnue.")
+        self.profile = PROFILES[distribution]
 
     def system(self) -> str:
         return "Linux"
 
     def os_release(self) -> Tuple[str, Optional[str]]:
-        return 'ID=arch\nPRETTY_NAME="Arch Linux (démonstration Omarchy)"\n', None
-
-    def omarchy_marker(self) -> Observation:
-        return Observation("present", "Dossier Omarchy fictif.")
+        return 'ID=' + self.profile.key + '\nPRETTY_NAME="' + self.profile.name + ' (démonstration)"\n', None
 
     def configuration(self) -> Observation:
         if self.scenario == "fresh":
@@ -69,7 +70,7 @@ class DemoProbe:
         return Observation("present", "Fichier fictif présent ; contenu non lu.")
 
     def tool(self, name: str) -> Optional[str]:
-        available = {"pacman", "systemctl"}
+        available = {self.profile.query_tool, "systemctl"}
         if self.scenario != "fresh":
             available |= {"smbd", "testparm", "smbpasswd", "smbclient", "ufw", "nft", "iptables"}
         return "/usr/bin/" + name if name in available else None
@@ -77,6 +78,6 @@ class DemoProbe:
     def service(self, name: str) -> Service:
         if self.scenario == "restricted":
             return Service(name, "unknown", detail="Accès systemd fictif refusé.")
-        if self.scenario == "configured" and name in {"smb.service", "ufw.service"}:
+        if self.scenario == "configured" and name in {self.profile.services[0], "ufw.service"}:
             return Service(name, "observed", "loaded", "active", "enabled")
         return Service(name, "missing", load_state="not-found", detail="Unité fictive absente.")

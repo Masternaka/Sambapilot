@@ -58,13 +58,13 @@ class SetupTests(unittest.TestCase):
         probe.service.assert_not_called()
         self.assertTrue(all(package.status == "unknown" for package in plan.packages))
 
-    def test_non_arch_skips_package_queries(self):
+    def test_unsupported_distribution_skips_package_queries(self):
         probe = DemoSetupProbe("configured")
-        with patch.object(probe, "os_release", return_value=('ID=debian\n', None)), \
+        with patch.object(probe, "os_release", return_value=('ID=alpine\n', None)), \
                 patch.object(probe, "package", side_effect=AssertionError("query")):
             plan = collect_installation_plan(probe)
         self.assertEqual(plan.status, "blocked")
-        self.assertEqual(self.steps(plan)["package:samba"].status, "blocked")
+        self.assertEqual(plan.packages, ())
 
     def test_absent_pacman_never_triggers_a_query(self):
         probe = DemoSetupProbe("configured")

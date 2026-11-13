@@ -10,11 +10,12 @@ from typing import Optional, Tuple
 from .demo import DemoProbe
 from .diagnostic import Report, collect
 from .system import HostProbe
+from .distributions import PROFILES
 
 
-PACKAGES = ("samba", "smbclient")
-PACKAGE_TOOLS = {"samba": ("smbd", "testparm", "smbpasswd"), "smbclient": ("smbclient",)}
-PACMAN_PATHS = ("/usr/bin/pacman", "/usr/sbin/pacman")
+QUERY_PATHS = {profile.query_tool: tuple(directory + profile.query_tool for directory in ("/usr/bin/", "/usr/sbin/"))
+               for profile in PROFILES.values()}
+
 
 
 @dataclass(frozen=True)
@@ -51,38 +52,70 @@ class InstallationPlan:
 
 
 def query_package(name: str, executable: str) -> Package:
-    if name not in PACKAGES or executable not in PACMAN_PATHS:
+    tool = next((tool for tool, paths in QUERY_PATHS.items() if executable in paths), None)
+    profile = next((profile for profile in PROFILES.values() if profile.query_tool == tool), None)
+    if profile is None or name not in profile.packages:
         raise ValueError("Requête de paquet hors du périmètre autorisé.")
+    if tool == "pacman":
+        command = (executable, "--query", "--", name)
+    elif tool == "dpkg-query":
+        command = (executable, "--show", "--showformat=${Package}\t${Status}\t${Version}\n", "--", name)
+    else:
+        command = (executable, "--query", "--queryformat", "%{NAME}\t%{EPOCHNUM}:%{VERSION}-%{RELEASE}\n", "--", name)
     try:
         result = subprocess.run(
-            (executable, "--query", "--", name), stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
-            timeout=3, shell=False, check=False, env={"PATH": "/usr/bin:/usr/sbin", "LC_ALL": "C"},
+            command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace", timeout=3, shell=False, check=False,
+            env={"PATH": "/usr/bin:/usr/sbin", "LC_ALL": "C"},
         )
     except (OSError, subprocess.TimeoutExpired):
         return Package(name, "unknown", detail="Base locale des paquets non consultable.")
-    fields = result.stdout.strip().split()
-    if (result.returncode == 0 and len(fields) == 2 and fields[0] == name
-            and re.fullmatch(r"[A-Za-z0-9_.+:~\-]+", fields[1])):
-        return Package(name, "installed", fields[1], "Paquet déclaré installé par la base locale.")
-    missing = "error: package '" + name + "' was not found"
-    if result.returncode == 1 and not result.stdout.strip() and result.stderr.strip() == missing:
-        return Package(name, "missing", detail="Paquet explicitement absent de la base locale.")
+    output, error = result.stdout.rstrip("\r\n"), result.stderr.strip()
+    version = None
+    missing = False
+    # Ne jamais déduire l'absence du seul code de sortie ou d'une sortie vide.
+    if tool == "pacman":
+        fields = output.split()
+        if result.returncode == 0 and not error and len(fields) == 2 and fields[0] == name:
+            version = fields[1]
+        missing = (result.returncode == 1 and not output
+                   and error == "error: package '" + name + "' was not found")
+    elif tool == "dpkg-query":
+        fields = output.split("\t")
+        if result.returncode == 0 and not error and len(fields) == 3 and fields[0] == name:
+            status = fields[1].split()
+            if len(status) == 3 and status[1] == "ok":
+                if status[2] == "installed":
+                    version = fields[2]
+                elif status[2] in {"config-files", "not-installed"}:
+                    missing = True
+        missing = missing or (result.returncode == 1 and not output
+                              and error == "dpkg-query: no packages found matching " + name)
+    else:
+        fields = output.split("\t")
+        if result.returncode == 0 and not error and len(fields) == 2 and fields[0] == name:
+            version = fields[1]
+        missing = (result.returncode == 1 and not error and output == "package " + name + " is not installed")
+    if version and re.fullmatch(r"[A-Za-z0-9_.+:~\-]+", version):
+        return Package(name, "installed", version, "Paquet déclaré installé par la base locale.")
+    if missing:
+        return Package(name, "missing", detail="Paquet explicitement non installé dans la base locale.")
     return Package(name, "unknown", detail="Réponse de la base locale ambiguë ou en erreur ; absence non déduite.")
 
 
 class HostSetupProbe(HostProbe):
-    def package(self, name: str) -> Package:
-        if name not in PACKAGES:
+    def package(self, name: str, family: str = "arch") -> Package:
+        profile = PROFILES.get(family)
+        if profile is None or name not in profile.packages:
             raise ValueError("Paquet hors du périmètre autorisé.")
-        executable = self.tool("pacman")
-        return (query_package(name, executable) if executable in PACMAN_PATHS
-                else Package(name, "unknown", detail="pacman système non détecté."))
+        executable = self.tool(profile.query_tool)
+        return (query_package(name, executable) if executable in QUERY_PATHS[profile.query_tool]
+                else Package(name, "unknown", detail="Outil système de consultation non détecté."))
 
 
 class DemoSetupProbe(DemoProbe):
-    def package(self, name: str) -> Package:
-        if name not in PACKAGES:
+    def package(self, name: str, family: str = "arch") -> Package:
+        if name not in self.profile.packages or family != self.profile.key:
             raise ValueError("Paquet hors du périmètre autorisé.")
         if self.scenario == "restricted":
             return Package(name, "unknown", detail="Base locale fictive inaccessible.")
@@ -92,23 +125,25 @@ class DemoSetupProbe(DemoProbe):
 
 
 def build_installation_plan(report: Report, packages: Tuple[Package, ...]) -> InstallationPlan:
-    if (len(packages) != len(PACKAGES) or {package.name for package in packages} != set(PACKAGES)
+    profile = PROFILES.get(report.environment.distribution_family)
+    expected_packages = profile.packages if profile else ()
+    if (len(packages) != len(expected_packages) or {package.name for package in packages} != set(expected_packages)
             or any(package.status not in {"installed", "missing", "unknown"} for package in packages)):
-        raise ValueError("Les états des deux paquets attendus doivent être uniques et explicites.")
+        raise ValueError("Les états des paquets attendus doivent être uniques et explicites.")
     tools = {tool.name: tool.path for tool in report.tools}
     package_map = {package.name: package for package in packages}
     steps = []
     blockers = []
-    supported = report.environment.system == "Linux" and report.environment.arch_based
+    supported = report.environment.system == "Linux" and profile is not None
+    query_available = profile is not None and tools.get(profile.query_tool) in QUERY_PATHS[profile.query_tool]
     if not supported:
-        blockers.append("La cible doit être un environnement Linux identifié comme Arch ; aucune installation proposée pour ce système.")
-    if tools.get("pacman") not in PACMAN_PATHS:
-        blockers.append("Le gestionnaire pacman système n’est pas disponible.")
+        blockers.append("La cible doit être Arch, Debian ou Fedora sous Linux ; aucune installation proposée pour ce système.")
+    if not query_available:
+        blockers.append("L’outil système de consultation des paquets n’est pas disponible.")
     if not tools.get("systemctl"):
         blockers.append("systemctl n’est pas détecté ; la gestion des services doit être examinée.")
-    for name in PACKAGES:
+    for name, expected in (profile.package_tools if profile else ()):
         package = package_map[name]
-        expected = PACKAGE_TOOLS[name]
         detected = tuple(tool for tool in expected if tools.get(tool))
         state = "retained" if package.status == "installed" else "needed" if package.status == "missing" else "blocked"
         detail = ("Conserver le paquet existant ; aucune réinstallation automatique."
@@ -122,7 +157,7 @@ def build_installation_plan(report: Report, packages: Tuple[Package, ...]) -> In
         if inconsistent:
             blockers.append("Incohérence entre la base des paquets et les exécutables détectés pour " + name + ".")
             state, detail = "blocked", "Examiner l’installation existante avant de remplacer ou réinstaller quoi que ce soit."
-        if not supported or tools.get("pacman") not in PACMAN_PATHS:
+        if not supported or not query_available:
             state, detail = "blocked", "Environnement ou gestionnaire non pris en charge ; aucune installation proposée."
         steps.append(SetupStep("package:" + name, "Paquet " + name, state, detail))
 
@@ -137,21 +172,22 @@ def build_installation_plan(report: Report, packages: Tuple[Package, ...]) -> In
                            if config == "missing" else "Résoudre l’état inconnu de la configuration avant toute création ou remplacement."))
     steps.append(SetupStep("accounts", "Comptes, groupes et permissions", "review",
                            "Choisir les dossiers et les identités autorisées ; examiner les comptes Linux, Samba et les ACL avant de proposer des changements."))
-    service = next((item for item in report.services if item.name == "smb.service"), None)
+    service_name = profile.services[0] if profile else "non déterminé"
+    service = next((item for item in report.services if item.name == service_name), None)
     if service and service.status == "observed" and service.unit_file_state.startswith("masked"):
         service_state = "blocked"
-        blockers.append("Le service smb.service est masqué ; aucun démasquage automatique proposé.")
+        blockers.append("Le service " + service_name + " est masqué ; aucun démasquage automatique proposé.")
         service_detail = "Examiner la raison du masquage avant de proposer une intervention."
     elif service and service.status == "observed" and service.load_state == "loaded" and service.active_state == "active":
         service_state, service_detail = "retained", "Conserver le service actif ; ne pas le redémarrer pour la préparation de ce plan."
     elif service and service.status == "observed" and service.load_state == "loaded" and service.active_state == "inactive":
         service_state, service_detail = "needed", "Proposer un démarrage uniquement après configuration validée, droits vérifiés et autorisation."
-    elif service and service.status == "missing" and package_map["samba"].status == "missing":
+    elif service and service.status == "missing" and package_map.get("samba", Package("samba", "unknown")).status == "missing":
         service_state, service_detail = "after-packages", "Réexaminer le service après une future installation autorisée du paquet."
     else:
         service_state, service_detail = "blocked", "Diagnostiquer le service absent, en échec ou dans un état non déterminé."
-        blockers.append("État du service smb.service à résoudre avant activation.")
-    steps.append(SetupStep("smb-service", "Service de partage smb.service", service_state, service_detail))
+        blockers.append("État du service " + service_name + " à résoudre avant activation.")
+    steps.append(SetupStep("smb-service", "Service de partage " + service_name, service_state, service_detail))
     startup_enabled = service is not None and service.status == "observed" and service.unit_file_state == "enabled"
     steps.append(SetupStep("startup", "Démarrage automatique", "retained" if startup_enabled else "review",
                            "Conserver l’activation persistante existante."
@@ -166,9 +202,9 @@ def build_installation_plan(report: Report, packages: Tuple[Package, ...]) -> In
                            + "Choisir le réseau et les interfaces avant de proposer des ouvertures ; aucun pare-feu ne sera désactivé."))
     steps.append(SetupStep("client-test", "Vérification depuis un autre appareil", "review",
                            "Prévoir des essais avec un compte autorisé et un compte non autorisé, en lecture puis en écriture selon les droits choisis."))
-    basis = json.dumps({"diagnostic": asdict(report), "packages": [asdict(package_map[name]) for name in PACKAGES]},
+    basis = json.dumps({"diagnostic": asdict(report), "packages": [asdict(package_map[name]) for name in expected_packages]},
                        ensure_ascii=True, sort_keys=True).encode("utf-8")
-    return InstallationPlan(1, report.mode, "blocked" if blockers else "review", report, packages,
+    return InstallationPlan(2, report.mode, "blocked" if blockers else "review", report, packages,
                             tuple(steps), tuple(blockers), hashlib.sha256(basis).hexdigest(), (
                                 "Plan descriptif uniquement : aucune commande d’installation ou de modification n’est exécutée.",
                                 "Les dépendances, conflits, versions à installer et éventuelles mises à jour ne sont pas encore calculés.",
@@ -180,11 +216,14 @@ def build_installation_plan(report: Report, packages: Tuple[Package, ...]) -> In
 
 def collect_installation_plan(probe) -> InstallationPlan:
     report = collect(probe)
-    pacman = next((tool.path for tool in report.tools if tool.name == "pacman"), None)
-    if report.environment.system == "Linux" and report.environment.arch_based and pacman in PACMAN_PATHS:
-        packages = tuple(probe.package(name) for name in PACKAGES)
+    profile = PROFILES.get(report.environment.distribution_family)
+    tools = {tool.name: tool.path for tool in report.tools}
+    if (report.environment.system == "Linux" and profile is not None
+            and tools.get(profile.query_tool) in QUERY_PATHS[profile.query_tool]):
+        packages = tuple(probe.package(name, profile.key) for name in profile.packages)
     else:
-        packages = tuple(Package(name, "unknown", detail="Requête non effectuée sur cet environnement.") for name in PACKAGES)
+        packages = tuple(Package(name, "unknown", detail="Requête non effectuée sur cet environnement.")
+                         for name in (profile.packages if profile else ()))
     return build_installation_plan(report, packages)
 
 

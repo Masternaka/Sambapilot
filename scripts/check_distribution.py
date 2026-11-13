@@ -30,7 +30,8 @@ def check(directory):
         entrypoints.read_string(wheel.read(metadata_files[0].replace('METADATA', 'entry_points.txt')).decode())
         if entrypoints.get('console_scripts', 'sambapilot') != 'sambapilot.cli:main':
             raise ValueError('Point d’entrée terminal incorrect.')
-        for path in (ROOT / 'sambapilot').rglob('*.py'):
+        for path in (path for path in (ROOT / 'sambapilot').rglob('*')
+                     if path.is_file() and path.suffix in ('.py', '.png')):
             if wheel.read(path.relative_to(ROOT).as_posix()) != path.read_bytes():
                 raise ValueError('Source différente dans le wheel : ' + str(path))
         if any(name.startswith(('tests/', 'scripts/', 'docs/')) for name in names):
@@ -41,6 +42,7 @@ def check(directory):
                  for path in (ROOT / folder).rglob(pattern)]
     required += [path for folder in ('.github', 'packaging')
                  for path in (ROOT / folder).rglob('*') if path.is_file()]
+    required += list((ROOT / 'sambapilot' / 'assets').rglob('*.png'))
     with tarfile.open(sources[0], 'r:gz') as archive:
         roots = {name.split('/')[0] for name in archive.getnames()}
         if len(roots) != 1:

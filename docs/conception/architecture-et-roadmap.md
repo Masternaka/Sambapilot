@@ -3,7 +3,7 @@
 ## Décisions prises
 
 - Nom du projet : **SambaPilot**.
-- Cible initiale : l’ordinateur Omarchy à la maison.
+- Cibles : Arch Linux, Debian et Fedora ; profils de paquets et de services distincts.
 - Deux interfaces : graphique et terminal.
 - Moteur commun pour les validations, les propositions de changements et les opérations système.
 - Autorisation explicite avant toute installation ou modification de la machine.
@@ -29,8 +29,9 @@ Toutes les commandes se lancent depuis la racine du dépôt, à côté de `Makef
 
 | Fichiers | Rôle actuel |
 | --- | --- |
-| `sambapilot/__main__.py`, `cli.py` | Entrée du module et sept commandes terminal. |
-| `diagnostic.py`, `system.py`, `demo.py` | Rapports, sondes Linux et données fictives. |
+| `sambapilot/__main__.py`, `cli.py` | Entrée du module et huit commandes terminal. |
+| `diagnostic.py`, `system.py`, `demo.py`, `distributions.py` | Rapports, sondes Linux, profils Arch/Debian/Fedora et données fictives. |
+| `troubleshooting.py`, `gtk_diagnostic.py` | Pistes de dépannage communes au terminal et au tableau de bord, sans réparation automatique. |
 | `access.py`, `presentation.py` | Estimation des accès déclarés et modèle de présentation sans GTK. |
 | `inspection.py` | Lecture bornée et inventaire des déclarations locales. |
 | `planning.py`, `file_planning.py` | Candidats, comparaison, sessions et vérification de source. |
@@ -56,13 +57,12 @@ Toutes les commandes se lancent depuis la racine du dépôt, à côté de `Makef
 - **Sondes injectables** : le moteur reçoit un adaptateur de lecture seule. L’adaptateur Linux consulte l’hôte ; l’adaptateur de démonstration fournit des données fictives et ne consulte jamais l’hôte.
 - **Rapport structuré** : les interfaces consomment le même modèle. La sortie JSON comporte un numéro de schéma pour permettre son évolution.
 
-Le moteur actuel ne possède aucune fonction d’exécution de changements. Le diagnostic utilise des requêtes `systemctl show` sur une liste fermée d’unités. La préparation d’installation ajoute des requêtes locales pacman sur deux paquets fixes. Le contrôle testparm reste explicitement demandé et limité aux candidats pris en charge. Les états d’activité et d’activation au démarrage restent distincts.
+Le moteur actuel ne possède aucune fonction d’exécution de changements. Le diagnostic utilise des requêtes `systemctl show` sur une liste fermée d’unités. La préparation d’installation ajoute des requêtes locales pacman, dpkg-query ou RPM sur les paquets fixes du profil détecté. Le contrôle testparm reste explicitement demandé et limité aux candidats pris en charge. Les états d’activité et d’activation au démarrage restent distincts.
 
 La prise en charge des paquets, des services et du pare-feu devra être fondée sur l’environnement effectivement détecté et sur les documentations officielles à jour. Aucun gestionnaire de pare-feu ne sera supposé présent ou actif.
 
 ### Références officielles consultées
 
-- [Omarchy : outils de développement et Python](https://omarchy.org/manual/development-tools/).
 - [GTK 4 : support de Wayland](https://docs.gtk.org/gtk4/wayland.html).
 - [PyGObject : interface GTK depuis Python](https://pygobject.gnome.org/getting_started.html).
 - [Arch Linux : fichiers du paquet Samba, dont les unités smb et nmb](https://archlinux.org/packages/extra/x86_64/samba/files/).
@@ -72,7 +72,9 @@ La prise en charge des paquets, des services et du pare-feu devra être fondée 
 
 ### 1. Socle et diagnostic
 
-État : implémenté et testé avec des sondes simulées ; validation réelle Omarchy encore à effectuer.
+Depuis le 13 novembre 2026, les trois profils sont implémentés. Le tableau de bord possède un constat local demandé explicitement et des exemples sélectionnables. Le dépannage réutilise ce constat pour trois symptômes. Ces fonctions et la CI multiplateforme sont décrites dans les [profils Linux](../guides/compatibilite-linux.md) et le [guide de dépannage](../guides/diagnostic-depannage.md) ; leur validation native reste à effectuer.
+
+État : implémenté et testé avec des sondes simulées ; validation réelle Linux encore à effectuer.
 
 - Choisir et documenter la pile technique.
 - Créer le moteur commun et une première interface terminal en lecture seule.
@@ -108,7 +110,7 @@ La [préparation du pare-feu](../guides/preparation-pare-feu.md) produit aussi d
 - Mettre en place les confirmations, les sauvegardes et la vérification de l’état avant application.
 - Gérer les échecs partiels et la restauration des configurations.
 
-Critère de validation : les opérations système sont testées dans un environnement Omarchy isolé et explicitement autorisé, y compris les refus de confirmation et les erreurs.
+Critère de validation : les opérations système sont testées dans un environnement Linux isolé et explicitement autorisé, y compris les refus de confirmation et les erreurs.
 
 ### 4. Interface graphique
 
@@ -122,13 +124,13 @@ Critère de validation : une même demande produit le même plan dans les deux i
 
 ### 5. Validation et distribution
 
-Priorité de stabilisation : confirmer le premier run CI, lire les bilans de tests puis suivre la [recette Omarchy](../validation/recette-omarchy.md). Les contrôles natifs deviennent stricts et les essais du paquet installé couvrent les nouveaux parcours d’export et de simulation. Le [bilan actuel](../validation/validation-socle.md) décrit les preuves acquises et restantes.
+Priorité de stabilisation : confirmer un run CI réussi pour ce lot, lire les bilans de tests puis suivre la [recette Linux](../validation/recette-linux.md). Les contrôles natifs deviennent stricts et les essais du paquet installé couvrent les nouveaux parcours d’export et de simulation. Le [bilan actuel](../validation/validation-socle.md) décrit les preuves acquises et restantes.
 
-État : workflow CI préparé avec matrice Python, tests GTK4 sous affichage virtuel et contrôles réels `testparm` optionnels. Le conditionnement est préparé avec contrôle du wheel et de l’archive source. Les jobs n’ont pas été exécutés ; voir le [guide de vérification automatisée](../validation/verification-automatisee.md).
+État : workflow CI préparé avec matrice Python, tests GTK4 sous affichage virtuel et contrôles réels `testparm` optionnels. Le conditionnement est préparé avec contrôle du wheel et de l’archive source. Les jobs n’ont pas été relancés pour ces changements ; voir le [guide de vérification automatisée](../validation/verification-automatisee.md).
 
 - Vérifier les accès réels depuis un autre appareil, en lecture et en écriture, avec des comptes autorisés et non autorisés.
 - Vérifier les restrictions réseau, la conservation des partages existants et la récupération après erreur.
 - Documenter l’installation de SambaPilot, son utilisation, ses limites et sa désinstallation.
-- Confirmer le paquet Arch préparé en CI et poursuivre vers le dépôt personnel pacman signé `Masternaka/master-archrepo`, selon le [guide de distribution](../guides/distribution-omarchy.md).
+- Confirmer le paquet Arch préparé en CI et poursuivre vers le dépôt personnel pacman signé `Masternaka/master-archrepo`, selon le [guide de distribution](../guides/distribution-linux.md).
 
 Critère de validation : distinguer dans le compte rendu les tests automatisés, les essais dans l’environnement isolé et les vérifications sur l’ordinateur cible. Toute intervention sur cet ordinateur nécessite son autorisation préalable.

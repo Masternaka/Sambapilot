@@ -1,6 +1,7 @@
 """Fenêtre native GTK 4 : démonstration et lecture d'un fichier choisi."""
 
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
+from pathlib import Path
 from threading import Thread
 
 from .presentation import (AccessFilters, DeclaredSharesView, DemoViewModel, declared_share_details, declared_share_guidance,
@@ -13,6 +14,7 @@ from .validation import format_validation, validate_plan
 from .gtk_setup import InstallationPage
 from .gtk_firewall import FirewallPage
 from .gtk_report import ReportExportWindow
+from .gtk_diagnostic import DiagnosticPage
 
 
 def label(text, style=None, selectable=False):
@@ -120,7 +122,12 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         self.update_accesses()
 
     def update_mode_banner(self, *_args):
-        if self.stack.get_visible_child_name() == "installation" and self.installation_page.source == "live":
+        if self.stack.get_visible_child_name() == "dashboard" and self.diagnostic_page.source == "live":
+            self.set_title("SambaPilot — Diagnostic local")
+            self.mode_label.set_text("Lecture seule")
+            self.banner_title.set_text("CONSTAT LOCAL · Diagnostic et dépannage")
+            self.banner_description.set_text("Métadonnées et états consultés sur demande ; aucune configuration lue ou modifiée, aucun test réseau.")
+        elif self.stack.get_visible_child_name() == "installation" and self.installation_page.source == "live":
             self.set_title("SambaPilot — Préparation de l’installation")
             self.mode_label.set_text("Lecture seule")
             self.banner_title.set_text("CONSTAT LOCAL · Aucune installation")
@@ -322,32 +329,18 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         self.inspection_generation += 1
         self.validation_generation += 1
         self.installation_page.close()
+        self.diagnostic_page.close()
         return False
 
     def dashboard_page(self):
-        content = page("Vos partages, en un coup d’œil",
-                       "Exemple d’un environnement domestique. Tous les indicateurs ci-dessous sont fictifs.")
-        counters = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE,
-                               column_spacing=12, row_spacing=12,
-                               min_children_per_line=2, max_children_per_line=4)
-        for value, title in ((len(self.model.shares), "Partages exemples"),
-                             (len(self.model.users), "Comptes exemples"),
-                             (self.model.conflict_count, "Accès en conflit"),
-                             (self.model.unknown_count, "Accès à vérifier")):
-            counters.insert(card(str(value), title), -1)
-        content.append(counters)
-        diagnostic = self.model.diagnostic
-        smb = next((service for service in diagnostic.services if service.name == "smb.service"), None)
-        content.append(card("Service Samba · exemple", "Activité : " + (smb.active_state if smb else "inconnue")
-                            + ". L’état de votre ordinateur n’est pas consulté."))
-        content.append(card("Un conflit à comprendre",
-                            "Dans l’exemple, alex peut lire le partage Famille, mais les permissions Linux "
-                            "refusent l’écriture autorisée par les règles Samba."))
+        # Cette page possède son propre constat ; les autres exemples restent isolés.
+        content = DiagnosticPage(self.update_mode_banner)
+        self.diagnostic_page = content
         actions = box(horizontal=True)
-        view = Gtk.Button(label="Voir les accès")
+        view = Gtk.Button(label="Voir les accès fictifs")
         view.add_css_class("suggested-action")
         view.connect("clicked", lambda _button: self.stack.set_visible_child_name("access"))
-        conflicts = Gtk.Button(label="Examiner les conflits")
+        conflicts = Gtk.Button(label="Examiner le conflit fictif")
         conflicts.connect("clicked", self.show_conflicts)
         actions.append(view)
         actions.append(conflicts)
@@ -912,6 +905,15 @@ class SambaPilotApplication(Gtk.Application):
         self.set_accels_for_action("app.quit", ["<Primary>q"])
 
     def do_activate(self):
+        display = Gdk.Display.get_default()
+        if display is not None:
+            # Ressources du paquet : aucun déploiement dans le thème de l'utilisateur.
+            theme = Gtk.IconTheme.get_for_display(display)
+            icon_root = Path(__file__).resolve().parent / "assets" / "icons"
+            theme.add_search_path(str(icon_root))
+            # Secours pour un lancement depuis les sources, sans thème installé.
+            theme.add_search_path(str(icon_root / "hicolor" / "256x256" / "apps"))
+        Gtk.Window.set_default_icon_name("io.github.sambapilot.SambaPilot")
         window = self.get_active_window()
         if window is None:
             window = SambaPilotWindow(self, DemoViewModel.create())

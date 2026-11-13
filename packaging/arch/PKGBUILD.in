@@ -26,5 +26,9 @@ package() {
     cd "${srcdir}/${pkgname}-${pkgver}"
     python -m installer --destdir="$pkgdir" dist/*.whl
     install -Dm644 packaging/arch/sambapilot.desktop \
-        "${pkgdir}/usr/share/applications/sambapilot.desktop"
+        "${pkgdir}/usr/share/applications/io.github.sambapilot.SambaPilot.desktop"
+    for size in 16 24 32 48 64 128 256 512; do
+        install -Dm644 "sambapilot/assets/icons/hicolor/${size}x${size}/apps/io.github.sambapilot.SambaPilot.png" \
+            "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/io.github.sambapilot.SambaPilot.png"
+    done
 }

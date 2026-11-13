@@ -34,7 +34,7 @@ MALFORMED
                     self.assertEqual(main(["diagnostic", "--demo", scenario, "--json"]), 0)
                     data = json.loads(output.getvalue())
                     self.assertEqual(data["mode"], "demo")
-                    self.assertEqual(data["schema_version"], 1)
+                    self.assertEqual(data["schema_version"], 2)
 
     def test_fresh_demo_does_not_claim_samba_installed(self):
         report = collect(DemoProbe("fresh"))
@@ -65,24 +65,23 @@ MALFORMED
         self.assertEqual(report.services, ())
         self.assertEqual(report.tools, ())
         probe.os_release.assert_not_called()
-        probe.omarchy_marker.assert_not_called()
         probe.configuration.assert_not_called()
         probe.service.assert_not_called()
         probe.tool.assert_not_called()
 
-    def test_unknown_distribution_does_not_claim_arch(self):
+    def test_unknown_distribution_remains_unknown(self):
         probe = DemoProbe()
         with patch.object(probe, "os_release", return_value=("", "Lecture refusée.")):
             report = collect(probe)
         self.assertEqual(report.environment.distribution_id, "unknown")
-        self.assertFalse(report.environment.arch_based)
+        self.assertEqual(report.environment.distribution_family, "unknown")
         self.assertIn("Lecture refusée.", report.notes)
 
-    def test_arch_derivative_is_recognized_without_claiming_omarchy(self):
+    def test_arch_derivative_is_recognized_with_explicit_limit(self):
         probe = DemoProbe()
         with patch.object(probe, "os_release", return_value=('ID=other\nID_LIKE="arch"', None)):
             report = collect(probe)
-        self.assertTrue(report.environment.arch_based)
+        self.assertEqual(report.environment.distribution_family, "arch")
         self.assertTrue(any("ne certifie pas" in note for note in report.notes))
 
     def test_terminal_filters_control_characters(self):

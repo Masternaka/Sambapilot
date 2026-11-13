@@ -1,10 +1,10 @@
-# Recette courte sur Omarchy
+# Recette sur Arch Linux, Debian et Fedora
 
 ## Quand l’utiliser
 
-Cette recette attend un ordinateur Omarchy disponible, une session graphique et les dépendances déjà présentes pour l’interpréteur Python choisi. Elle ne lance aucune installation. Les premières étapes se font depuis les sources, après un run CI réussi sur le commit à examiner.
+Cette recette est à répéter sur Arch Linux, Debian et Fedora, avec un ordinateur cible disponible, une session graphique et les dépendances déjà présentes pour l’interpréteur Python choisi. Elle ne lance aucune installation. Les premières étapes se font depuis les sources, après un run CI réussi sur le commit à examiner.
 
-Les écritures de travail ci-dessous concernent uniquement un dossier temporaire et les exports explicitement choisis. Les modifications de paquets, services, comptes, permissions, pare-feu, trousseau pacman et configuration active restent hors de cette recette.
+Les écritures de travail ci-dessous concernent uniquement un dossier temporaire et les exports explicitement choisis. Les modifications de paquets, services, comptes, permissions, pare-feu, confiance des dépôts de paquets et configuration active restent hors de cette recette.
 
 ## Préparer le dossier de travail
 
@@ -51,7 +51,8 @@ python3 -B -m sambapilot gui --demo
 
 | Scénario | Résultat à observer |
 | --- | --- |
-| Démarrage | Fenêtre lisible sous Hyprland/Wayland, bandeau fictif, navigation latérale, absence de demande de privilèges. |
+| Diagnostic local et dépannage | Demander le constat local, vérifier la distribution et son service Samba attendu, essayer les trois symptômes puis revenir aux exemples ; aucune matrice fictive ne devient réelle. |
+| Démarrage | Fenêtre lisible dans la session Wayland ou X11 de la cible, bandeau fictif, navigation latérale, absence de demande de privilèges. |
 | Exemples et accès | Cartes de partages, filtres des accès et conflit expliqué ; la réinitialisation rétablit les exemples. |
 | Fichier fictif | Choisir le `smb.conf` du dossier de recette ; la page Partages affiche son chemin, son empreinte et ses déclarations, avec des droits effectifs inconnus. |
 | Recherche et catégories | Recherche par nom/chemin, filtre combiné, état sans résultat, réinitialisation et retour aux exemples sans mélange des sources. |
@@ -68,7 +69,7 @@ La démonstration `make demo-backup` utilise son propre laboratoire temporaire. 
 
 ## Compte rendu à conserver
 
-Noter : date, commit, version de Python, versions GTK/PyGObject/Samba disponibles, session Wayland/Hyprland, thème, résultats de commandes et statut de chaque scénario (**Réussi**, **Échec**, **Non exécuté**). Pour une anomalie, conserver les étapes et, si utile, une capture sans données personnelles.
+Noter : date, commit, version de Python, versions GTK/PyGObject/Samba disponibles, session Wayland ou X11, thème, résultats de commandes et statut de chaque scénario (**Réussi**, **Échec**, **Non exécuté**). Pour une anomalie, conserver les étapes et, si utile, une capture sans données personnelles.
 
 Les essais du paquet installé et de sa désinstallation doivent être planifiés séparément dans un environnement autorisé, après téléchargement et vérification des artefacts CI. L’activation de `master-archrepo` n’est pas incluse dans cette recette.
 

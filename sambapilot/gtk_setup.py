@@ -4,6 +4,7 @@ from threading import Thread
 from gi.repository import GLib, Gtk
 
 from .demo import SCENARIOS
+from .distributions import PROFILES
 from .setup import DemoSetupProbe, HostSetupProbe, collect_installation_plan, format_installation
 
 
@@ -22,6 +23,9 @@ class InstallationPage(Gtk.Box):
         self.append(Gtk.Label(label="Examinez les composants et les étapes nécessaires. "
                               "Aucun paquet ne sera installé et aucun réglage ne sera appliqué.", xalign=0, wrap=True))
         controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.distribution = Gtk.DropDown.new_from_strings([profile.name + " · exemple" for profile in PROFILES.values()])
+        self.distribution.set_tooltip_text("Distribution du plan fictif")
+        controls.append(self.distribution)
         self.scenario = Gtk.DropDown.new_from_strings(["Sans Samba · exemple", "Déjà installé · exemple", "Accès restreint · exemple"])
         self.scenario.set_tooltip_text("Scénario utilisé lors de la préparation d’un plan d’exemple")
         controls.append(self.scenario)
@@ -41,6 +45,8 @@ class InstallationPage(Gtk.Box):
         self.append(Gtk.Label(label="La transaction exacte, les comptes, les dossiers et les réseaux restent à examiner. "
                               "Cette page ne peut exécuter aucune intervention.", xalign=0, wrap=True))
         self.display_plan(self.current_plan)
+        self.distribution.connect("notify::selected", self.prepare_demo)
+        self.scenario.connect("notify::selected", self.prepare_demo)
 
     def display_plan(self, plan):
         self.current_plan = plan
@@ -49,12 +55,13 @@ class InstallationPage(Gtk.Box):
         self.status.set_text(origin + " · " + ("points bloquants à résoudre" if plan.status == "blocked"
                                                else "choix et interventions à examiner") + ". Aucun changement exécuté.")
 
-    def prepare_demo(self, _button=None):
+    def prepare_demo(self, *_args):
         self.generation += 1
         self.source = "demo"
         index = self.scenario.get_selected()
         scenario = SCENARIOS[index] if 0 <= index < len(SCENARIOS) else "fresh"
-        self.display_plan(collect_installation_plan(DemoSetupProbe(scenario)))
+        family = tuple(PROFILES)[self.distribution.get_selected()]
+        self.display_plan(collect_installation_plan(DemoSetupProbe(scenario, family)))
         self.source_changed()
 
     def examine_local(self, _button):

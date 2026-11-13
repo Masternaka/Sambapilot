@@ -14,9 +14,12 @@ Les nouveaux documents sont ajoutés dans la rubrique correspondante et référe
 
 | Guide | Contenu |
 | --- | --- |
-| [Présentation et démarrage](../README.md) | État du projet, prérequis, sept commandes, exemples et codes de sortie. |
-| [Construction et futur dépôt Omarchy](guides/distribution-omarchy.md) | Artefacts après un push, paquet Arch et étapes vers un dépôt personnel pacman. |
+| [Présentation et démarrage](../README.md) | État du projet, prérequis, huit commandes, exemples et codes de sortie. |
+| [Compatibilité Linux](guides/compatibilite-linux.md) | Profils Arch, Debian et Fedora, paquets, services, schémas JSON et limites. |
+| [Diagnostic et dépannage](guides/diagnostic-depannage.md) | Tableau de bord local sur demande, exemples et pistes selon le symptôme. |
+| [Distribution Python et paquet Arch](guides/distribution-linux.md) | Artefacts après un push, paquet Arch et étapes vers un dépôt personnel pacman. |
 | [Interface graphique](guides/interface-graphique.md) | Prérequis GTK, huit rubriques, limites et parcours de vérification. |
+| [Icône de l’application](guides/icones-application.md) | Dossier connecté, tailles PNG, ressources GTK et intégration au paquet Arch. |
 | [Examen de configuration](guides/inspection-configuration.md) | Lecture d’un fichier choisi, déclarations locales et refus prudents. |
 | [Préparation des partages](guides/preparation-partages.md) | Ajout, modification et retrait d’une déclaration, aperçu et comparaison. |
 | [Simulation sauvegarde/restauration](guides/simulation-sauvegarde-restauration.md) | Laboratoire temporaire, intégrité des copies, aperçu et refus de restauration. |
@@ -36,10 +39,10 @@ Le diagnostic et la matrice fictive des accès sont présentés dans le README. 
 | [Recommandations](conception/recommandations.md) | État de la vue des accès et propositions complémentaires. |
 | [CI et distribution](validation/verification-automatisee.md) | Jobs préparés, tests natifs optionnels et contrôles du paquet Python. |
 | [Bilan actuel de validation](validation/validation-socle.md) | Résultats locaux, correspondance fonctionnalités/tests, preuves CI attendues et première reprise. |
-| [Recette courte Omarchy](validation/recette-omarchy.md) | Essais futurs depuis les sources, sur une copie fictive, avec résultats attendus. |
+| [Recette courte Linux](validation/recette-linux.md) | Essais futurs depuis les sources, sur une copie fictive, avec résultats attendus. |
 | [Historique des lots](validation/historique-validation-2026-11-09.md) | Vérifications successives conservées ; les anciens totaux ne décrivent pas l’état actuel. |
 | [Guide des assistants](../AGENTS.md) | Autorisation préalable, organisation, conventions et vérifications. |
 
-La revue locale du 9 novembre 2026 valide 266 tests ordinaires et la syntaxe de 43 fichiers Python ; les liens locaux sont également vérifiés. La suite découvre 304 tests : 266 réussis et 38 ignorés en local (34 GTK et 4 Samba). Le workflow Linux/GTK4 et distribution est préparé mais non exécuté. Les essais sur Omarchy avec Samba, une session GTK et un appareil client restent à effectuer, ainsi que la validation du conditionnement.
+Le lot du 13 novembre 2026 ajoute les profils Arch, Debian et Fedora et le diagnostic/dépannage partagé. Les tests ordinaires sont contrôlés localement ; les suites natives et la CI restent à confirmer. Le [bilan actuel](validation/validation-socle.md) conserve les résultats datés et leurs limites.
 
 Les liens vers les documentations externes des composants sont des références techniques ; cette revue du dépôt ne constitue pas une nouvelle vérification de leur contenu.

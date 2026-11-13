@@ -12,7 +12,7 @@
 
 ## Périmètre actuel du projet
 
-SambaPilot est un utilitaire Python destiné à Omarchy, avec une interface terminal et une interface GTK4 optionnelle utilisant le même moteur. GTK4 reste le choix retenu pour poursuivre le développement graphique. La version déclarée est `0.1.0.dev0` et le minimum Python est 3.9.
+SambaPilot est un utilitaire Python destiné à Arch Linux, Debian et Fedora, avec une interface terminal et une interface GTK4 optionnelle utilisant le même moteur. GTK4 reste le choix retenu pour poursuivre le développement graphique. La version déclarée est `0.1.0.dev0` et le minimum Python est 3.9. Les profils et les plans utilisent les paquets et services propres à chaque distribution ; ne pas présenter les tests simulés comme une validation native des trois cibles.
 
 Le code actuel fournit des diagnostics, des lectures de fichiers choisis et des plans descriptifs. Il ne contient aucune application de changements système. Ne pas présenter une préparation d’installation comme un installateur ni une intention de pare-feu comme une règle appliquée. Tous les plans conservent `can_apply: false`.
 
@@ -56,6 +56,7 @@ Les tests GTK sont ignorés par défaut. Leur activation, avec des dépendances 
 - Invalider les aperçus et contrôles après un changement de formulaire ou de source ; vérifier l’empreinte du fichier aux étapes prévues.
 - Garder les informations inconnues explicites (`None`/`null`), distinctes d’un refus. Distinguer règles Samba, permissions de fichiers et accès réseau réel.
 - Pour les sondes, conserver les listes fermées de programmes, arguments et unités, `shell=False`, les délais et l’absence de `sudo` ou de saisie interactive.
+- Le tableau de bord démarre sur des exemples. Son constat local exige un clic explicite ; changer d’exemple ou fermer la fenêtre invalide les résultats en attente. Le dépannage réutilise le constat sans lancer de sonde supplémentaire.
 - Ne lancer `testparm` que sur demande explicite, sur une copie temporaire privée et dans le périmètre reconnu. Une acceptation ne rend pas le plan applicable.
 - Ne pas ajouter de secrets, de configurations personnelles, de sauvegardes réelles ou de mots de passe dans le dépôt, les journaux ou les arguments de processus.
 - Préserver les modifications déjà présentes dans l’arbre de travail ; ne pas annuler une réorganisation ou des changements de l’utilisateur.
@@ -75,10 +76,10 @@ Rapporter les résultats réels des commandes, en distinguant les tests réussis
 
 Les tests Samba réels exigent `SAMBAPILOT_SAMBA_TESTS=1` (`make test-samba`) et Linux avec `testparm` déjà disponible. Ne pas les activer implicitement en local. Voir le [guide CI et distribution](docs/validation/verification-automatisee.md) pour les effets des jobs et les limites de validation.
 
-Les constructions réussies peuvent être conservées comme artefacts GitHub, sans release ni publication pacman automatique. Le futur dépôt personnel est `Masternaka/master-archrepo`, avec la section pacman `master-archrepo`. Il doit utiliser les paquets Arch, des signatures et un hébergement durable ; ne pas activer de dépôt ni importer de clé sur la machine sans autorisation explicite. Ne pas attribuer une licence au projet sans décision de l’utilisateur. Voir le [guide de distribution](docs/guides/distribution-omarchy.md).
+Les constructions réussies peuvent être conservées comme artefacts GitHub, sans release ni publication pacman automatique. Le futur dépôt personnel est `Masternaka/master-archrepo`, avec la section pacman `master-archrepo`. Il doit utiliser les paquets Arch, des signatures et un hébergement durable ; ne pas activer de dépôt ni importer de clé sur la machine sans autorisation explicite. Ne pas attribuer une licence au projet sans décision de l’utilisateur. Voir le [guide de distribution](docs/guides/distribution-linux.md).
 
 L’export Markdown est une écriture de document sur demande explicite, distincte d’une application de configuration système. Ne pas exporter automatiquement, remplacer un fichier existant ou inclure le fichier brut/candidat. Signaler les chemins et identifiants inclus, préserver les dates de lecture et invalider les aperçus lors d’un changement de source. Voir le [guide d’export](docs/guides/export-rapport.md).
 
 Le laboratoire `backup_simulation.py` et `make demo-backup` utilisent exclusivement leur propre dossier temporaire et les données fictives. Ne pas ajouter de chemin de configuration réelle ou de restauration système à ce laboratoire. Ses sauvegardes jetables ne sont pas des sauvegardes utilisateur durables ; voir le [guide de simulation](docs/guides/simulation-sauvegarde-restauration.md).
 
-Pour la stabilisation, conserver le [bilan actuel](docs/validation/validation-socle.md) distinct de l’historique des lots. `make test` utilise le lanceur contrôlant les tests ignorés ; `make test-native` exige GTK et Samba sans ignorer de tests. Les essais de `smoke_installed.py` portent sur un paquet déjà installé dans un environnement autorisé et ne doivent pas être présentés comme exécutés localement sans preuve. La [recette Omarchy](docs/validation/recette-omarchy.md) prépare les validations manuelles restantes.
+Pour la stabilisation, conserver le [bilan actuel](docs/validation/validation-socle.md) distinct de l’historique des lots. `make test` utilise le lanceur contrôlant les tests ignorés ; `make test-native` exige GTK et Samba sans ignorer de tests. Les essais de `smoke_installed.py` portent sur un paquet déjà installé dans un environnement autorisé et ne doivent pas être présentés comme exécutés localement sans preuve. La [recette Linux](docs/validation/recette-linux.md) prépare les validations manuelles restantes.

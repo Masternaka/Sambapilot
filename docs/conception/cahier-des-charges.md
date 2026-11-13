@@ -2,17 +2,17 @@
 
 ## Objectif
 
-Centraliser la gestion complète des partages Samba sur l’ordinateur Omarchy à la maison, depuis l’installation initiale jusqu’à la maintenance quotidienne.
+Centraliser la gestion des partages Samba sur Arch Linux, Debian et Fedora, depuis la préparation initiale jusqu’à la maintenance quotidienne, avec des adaptateurs propres à chaque distribution.
 
 Ce document décrit la cible fonctionnelle, y compris les interventions système encore à développer. Pour le périmètre utilisable aujourd’hui, consulter le [README](../../README.md) et les [guides](../README.md).
 
-Le diagnostic, la matrice des accès fictifs, l’examen d’un fichier choisi, les aperçus de partage, le contrôle facultatif avec `testparm`, les plans descriptifs d’installation et les intentions de pare-feu sont codés. Aucune application de changement système n’est implémentée. Les essais réels Omarchy, Samba et GTK restent à effectuer.
+Le diagnostic, la matrice des accès fictifs, l’examen d’un fichier choisi, les aperçus de partage, le contrôle facultatif avec `testparm`, les plans descriptifs d’installation et les intentions de pare-feu sont codés. Aucune application de changement système n’est implémentée. Les essais réels Linux, Samba et GTK restent à effectuer.
 
 ## Deux interfaces
 
 L’interface graphique permettra de consulter les partages et d’effectuer les opérations courantes avec des formulaires et des aperçus des changements.
 
-L’interface terminal donnera accès aux mêmes fonctions. Les sept commandes actuelles sont documentées dans le [README](../../README.md) ; les futures commandes d’application restent à définir. Les opérations modifiant la machine devront toujours demander une confirmation explicite ; aucun changement ne sera déclenché au démarrage.
+L’interface terminal donne accès au même moteur. Les huit commandes actuelles, dont le diagnostic et le dépannage en lecture seule, sont documentées dans le [README](../../README.md) ; les futures commandes d’application restent à définir. Les opérations modifiant la machine devront toujours demander une confirmation explicite ; aucun changement ne sera déclenché au démarrage.
 
 ## Installation et configuration initiale
 

@@ -16,6 +16,8 @@ from .report_export import ReportExportError, prepare_report, save_report
 from .validation import format_validation, validate_plan
 from .setup import DemoSetupProbe, HostSetupProbe, collect_installation_plan, format_installation
 from .firewall import MANAGERS, FirewallIntent, FirewallPlanError, format_firewall, prepare_firewall
+from .distributions import PROFILES
+from .troubleshooting import SYMPTOMS, format_troubleshooting, troubleshoot
 
 
 STATUS = {"present": "présent", "missing": "absent", "unknown": "inconnu",
@@ -35,8 +37,9 @@ def render(report: Report) -> str:
         "", "Environnement",
         "  Système : " + safe_text(env.system),
         "  Distribution : " + safe_text(env.distribution_name),
-        "  Base Arch identifiée : " + ("oui" if env.arch_based else "non / inconnue"),
-        "  Indice Omarchy : " + STATUS[env.omarchy_marker.status],
+        "  Famille : " + env.distribution_family,
+        "  Gestionnaire de paquets : " + (env.package_manager or "non déterminé"),
+        "  Service Samba attendu : " + (env.samba_service or "non déterminé"),
         "", "Configuration /etc/samba/smb.conf",
         "  " + STATUS[report.configuration.status] + " — " + report.configuration.detail,
     ]
@@ -94,7 +97,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     diagnostic = subcommands.add_parser("diagnostic", help="Examiner l'environnement sans le modifier.")
     diagnostic.add_argument("--demo", nargs="?", const="configured", choices=SCENARIOS,
                             help="Données fictives, sans consulter le système (défaut : configured).")
-    diagnostic.add_argument("--json", action="store_true", help="Rapport structuré JSON, schéma version 1.")
+    diagnostic.add_argument("--distribution", choices=tuple(PROFILES), help="Distribution fictive, uniquement avec --demo (défaut : arch).")
+    diagnostic.add_argument("--json", action="store_true", help="Rapport structuré JSON, schéma version 2.")
+    help_command = subcommands.add_parser("depannage", help="Expliquer les pistes d’un symptôme, sans intervention.")
+    help_source = help_command.add_mutually_exclusive_group(required=True)
+    help_source.add_argument("--demo", nargs="?", const="configured", choices=SCENARIOS)
+    help_source.add_argument("--local", action="store_true", help="Demander explicitement un diagnostic local en lecture seule.")
+    help_command.add_argument("--symptom", choices=tuple(SYMPTOMS), required=True)
+    help_command.add_argument("--distribution", choices=tuple(PROFILES), help="Distribution fictive, uniquement avec --demo.")
+    help_command.add_argument("--json", action="store_true")
     permissions = subcommands.add_parser("permissions", help="Afficher la matrice des accès déclarés.")
     permissions.add_argument("--demo", action="store_true", required=True,
                              help="Données fictives uniquement ; collecte réelle non implémentée.")
@@ -127,6 +138,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     setup_source.add_argument("--demo", nargs="?", const="fresh", choices=SCENARIOS, help="Données fictives (défaut : fresh).")
     setup_source.add_argument("--local", action="store_true", help="Consulter l’hôte et la base locale des paquets en lecture seule.")
     setup.add_argument("--json", action="store_true", help="Plan descriptif structuré JSON.")
+    setup.add_argument("--distribution", choices=tuple(PROFILES), help="Distribution fictive, uniquement avec --demo (défaut : arch).")
     firewall = subcommands.add_parser("plan-pare-feu", help="Décrire un périmètre réseau choisi, sans consulter ni modifier le pare-feu.")
     firewall.add_argument("--manager", choices=MANAGERS, required=True)
     firewall.add_argument("--interface", required=True, help="Interface d’entrée explicitement choisie.")
@@ -135,6 +147,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     firewall.add_argument("--legacy-netbios", action="store_true", help="Proposer aussi TCP 139 et UDP 137/138 pour les sources IPv4.")
     firewall.add_argument("--json", action="store_true", help="Intentions structurées JSON, sans commandes natives.")
     args = parser.parse_args(argv)
+    if getattr(args, "distribution", None) is not None and not args.demo:
+        parser.error("--distribution choisit uniquement une distribution fictive avec --demo ; l’hôte est détecté automatiquement.")
+    if args.command == "depannage":
+        report = collect(DemoProbe(args.demo, args.distribution or "arch") if args.demo else HostProbe())
+        result = troubleshoot(report, args.symptom)
+        print(json.dumps(result.to_dict(), ensure_ascii=True, indent=2) if args.json else format_troubleshooting(result))
+        return 0 if report.environment.system == "Linux" else 2
     if args.command == "plan-pare-feu":
         try:
             firewall_plan = prepare_firewall(FirewallIntent(args.manager, args.interface, tuple(args.source),
@@ -144,7 +163,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(json.dumps(firewall_plan.to_dict(), ensure_ascii=True, indent=2) if args.json else format_firewall(firewall_plan))
         return 0
     if args.command == "preparer-installation":
-        setup_plan = collect_installation_plan(DemoSetupProbe(args.demo) if args.demo else HostSetupProbe())
+        setup_plan = collect_installation_plan(DemoSetupProbe(args.demo, args.distribution or "arch") if args.demo else HostSetupProbe())
         print(json.dumps(setup_plan.to_dict(), ensure_ascii=True, indent=2) if args.json else format_installation(setup_plan))
         return 2 if setup_plan.status == "blocked" else 0
     if args.command == "examiner-config":
@@ -196,7 +215,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         matrix = access_demo()
         print(json.dumps(matrix.to_dict(), ensure_ascii=True, indent=2) if args.json else render_access(matrix))
         return 0
-    probe = DemoProbe(args.demo) if args.demo else HostProbe()
+    probe = DemoProbe(args.demo, args.distribution or "arch") if args.demo else HostProbe()
     report = collect(probe)
     print(json.dumps(report.to_dict(), ensure_ascii=True, indent=2) if args.json else render(report))
     return 0 if report.environment.system == "Linux" else 2

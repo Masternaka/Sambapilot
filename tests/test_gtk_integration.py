@@ -32,6 +32,59 @@ class GtkIntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.window.visible_decisions), 12)
         self.assertIsNotNone(self.window.access_list.get_selected_row())
 
+    def test_dashboard_demo_profiles_do_not_consult_host(self):
+        from unittest.mock import patch
+        page = self.window.diagnostic_page
+        with patch("sambapilot.gtk_diagnostic.HostProbe", side_effect=AssertionError("host")):
+            for index, family in enumerate(("arch", "debian", "fedora")):
+                page.distribution.set_selected(index)
+                page.use_demo()
+                self.assertEqual(page.report.environment.distribution_family, family)
+                self.assertEqual(page.source, "demo")
+                page.symptom.set_selected(2)
+                text = page.help_output.get_buffer()
+                self.assertIn("Impossible d’écrire", text.get_text(text.get_start_iter(), text.get_end_iter(), False))
+
+    def test_dashboard_discards_local_result_after_return_to_demo_and_close(self):
+        from dataclasses import replace
+        from unittest.mock import patch
+        page = self.window.diagnostic_page
+        self.window.stack.set_visible_child_name("dashboard")
+        original = page.report
+        with patch("sambapilot.gtk_diagnostic.Thread"):
+            page.examine_local()
+        generation = page.generation
+        self.assertIsNone(page.report)
+        self.assertEqual(self.window.mode_label.get_text(), "Lecture seule")
+        local = replace(original, mode="live")
+        page.use_demo()
+        page.receive_report(generation, local)
+        self.assertEqual(page.report.mode, "demo")
+        self.assertEqual(self.window.mode_label.get_text(), "Démonstration")
+        page.close()
+        page.receive_report(page.generation - 1, local)
+        self.assertEqual(page.report.mode, "demo")
+
+    def test_dashboard_local_failure_clears_help_and_keeps_other_sources_separate(self):
+        from unittest.mock import patch
+        page = self.window.diagnostic_page
+        accesses = self.window.visible_decisions
+        with patch("sambapilot.gtk_diagnostic.Thread"):
+            page.examine_local()
+        page.receive_report(page.generation, None)
+        self.assertIsNone(page.report)
+        self.assertIn("interrompue", page.status.get_text())
+        self.assertEqual(self.window.visible_decisions, accesses)
+        text = page.help_output.get_buffer()
+        self.assertEqual(text.get_text(text.get_start_iter(), text.get_end_iter(), False), "")
+
+    def test_installation_page_uses_selected_distribution_for_demo(self):
+        page = self.window.installation_page
+        page.distribution.set_selected(1)
+        page.prepare_demo()
+        self.assertEqual(page.current_plan.diagnostic.environment.distribution_family, "debian")
+        self.assertIn("samba-common-bin", [package.name for package in page.current_plan.packages])
+
     def test_conflict_navigation_and_reset(self):
         self.window.show_conflicts(None)
         self.assertEqual(self.window.stack.get_visible_child_name(), "access")

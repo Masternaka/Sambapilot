@@ -2,7 +2,7 @@
 
 ## Périmètre disponible
 
-SambaPilot peut décrire les étapes nécessaires pour préparer Samba sur un environnement Linux identifié comme Arch. Le plan repose sur un constat des outils, des services, de la présence de la configuration et des états des paquets `samba` et `smbclient`.
+SambaPilot décrit les étapes nécessaires pour préparer Samba sur Arch Linux, Debian ou Fedora. Le plan repose sur un constat des outils, des services, de la présence de la configuration et des paquets propres au profil détecté. La [matrice Linux](compatibilite-linux.md) précise les noms de paquets et de services.
 
 Il reste **descriptif et non applicable**. Il n’installe rien, ne télécharge aucun paquet, ne synchronise aucun dépôt et ne modifie aucun fichier, compte, service ou pare-feu. Le champ JSON `can_apply` reste faux.
 
@@ -14,7 +14,7 @@ Depuis la racine du dépôt, essayer les trois scénarios fictifs :
 
 ```sh
 python3 -B -m sambapilot preparer-installation --demo fresh
-python3 -B -m sambapilot preparer-installation --demo configured
+python3 -B -m sambapilot preparer-installation --demo configured --distribution debian
 python3 -B -m sambapilot preparer-installation --demo restricted --json
 ```
 
@@ -33,7 +33,7 @@ Le code `0` signifie que le plan descriptif a été produit et comporte encore d
 
 ## Depuis la fenêtre GTK
 
-La rubrique **Installation** affiche initialement le scénario fictif sans Samba. Un menu et le bouton « Préparer l’exemple » permettent de consulter les autres scénarios.
+La rubrique **Installation** affiche initialement le scénario fictif sans Samba. Deux menus permettent de choisir le scénario et la distribution fictive. Leur modification revient immédiatement aux exemples et invalide une consultation locale en attente ; le bouton « Préparer l’exemple » permet aussi de régénérer le plan.
 
 Le bouton **Examiner cet ordinateur (lecture seule)** demande explicitement le constat local. Les consultations ont lieu dans un fil séparé ; le bandeau indique « Constat local · Aucune installation ». Revenir à un exemple invalide les résultats locaux encore en attente.
 
@@ -58,7 +58,7 @@ Les étapes couvrent séparément :
 1. Les paquets serveur et client.
 2. La préparation ou l’examen de la configuration, avec candidat, contrôle et sauvegarde avant une future écriture.
 3. Le choix des dossiers, des utilisateurs, des groupes et des permissions.
-4. Le service `smb.service` : conserver un service actif, proposer un démarrage seulement après les prérequis, ou diagnostiquer un état inconnu ou en échec.
+4. Le service `smbd.service` sur Debian ou `smb.service` sur Arch et Fedora : conserver un service actif, proposer un démarrage seulement après les prérequis, ou diagnostiquer un état inconnu ou en échec.
 5. Le démarrage automatique, distinct de l’activité actuelle du service.
 6. Le gestionnaire de pare-feu, les règles effectives et le réseau à choisir.
 7. Les essais depuis un autre appareil, avec des comptes autorisés et non autorisés.
@@ -67,24 +67,26 @@ Un service masqué bloque la proposition de démarrage : aucun démasquage autom
 
 ## Consultations locales
 
-Le diagnostic existant reste en lecture seule. Sur une cible Arch avec le gestionnaire système détecté, deux requêtes supplémentaires consultent les paquets :
+Le diagnostic reste en lecture seule. Si la distribution est reconnue et son outil système détecté, la préparation consulte la base locale des paquets. Pour Arch :
 
 ```text
 /usr/bin/pacman --query -- samba
 /usr/bin/pacman --query -- smbclient
 ```
 
-Le chemin système `/usr/sbin/pacman` est également accepté s’il est détecté. Aucun exécutable provenant d’un shim utilisateur n’est lancé. Les noms de paquets et les chemins de programme forment des listes fermées. Les appels sont sans shell, sans `sudo`, sans saisie interactive et limités à trois secondes chacun.
+Sur Debian, les requêtes utilisent `dpkg-query --show` avec un format explicite du nom, de l’état et de la version. Un paquet dépaqueté ou partiellement configuré reste inconnu ; des fichiers de configuration résiduels ne signifient pas que le paquet est installé. Sur Fedora, les requêtes utilisent `rpm --query` avec un format explicite du nom et de la version. Ni apt ni dnf ne sont exécutés.
+
+Les chemins `/usr/bin` et `/usr/sbin` sont acceptés pour les outils de requête. Aucun exécutable provenant d’un shim utilisateur n’est lancé. Les noms de paquets et les chemins de programme forment des listes fermées. Les appels sont sans shell, sans `sudo`, sans saisie interactive et limités à trois secondes chacun.
 
 Un retour d’erreur ne prouve pas une absence : seule la réponse explicite « paquet introuvable » est interprétée comme telle. Les erreurs de base, les réponses inattendues, les refus et les délais dépassés restent inconnus et bloquent la proposition concernée.
 
-La présence du dossier Omarchy reste un indice. Elle ne certifie pas une installation fonctionnelle. Sur un système hors Linux ou non identifié comme Arch, les requêtes de paquets ne sont pas lancées et le plan est bloqué.
+Sur un système hors Linux, inconnu ou dont les familles sont ambiguës, les requêtes de paquets ne sont pas lancées et le plan est bloqué. Aucun marqueur de bureau n’est recherché. Le gestionnaire et le service attendus viennent du profil, sans supposer un pare-feu ou une politique SELinux/AppArmor.
 
 ## Validation réalisée et suites
 
 Les tests simulent les consultations des paquets et des services. Ils couvrent les trois scénarios, les erreurs, les incohérences, les services masqués et la séparation du démarrage automatique. Les scénarios fictifs sont vérifiés sans accès aux fichiers ni lancement de processus.
 
-Aucune vraie requête pacman ni installation sur Omarchy n’a été exécutée pendant le développement. Les essais natifs GTK restent à effectuer. Le diagnostic local existant et les requêtes de paquets devront être vérifiés ensemble sur la cible autorisée.
+Aucune vraie requête pacman, dpkg ou RPM ni installation sur les cibles n’a été exécutée localement. La CI prépare ces contrôles dans des conteneurs temporaires, sans constituer encore une preuve de réussite. Les essais natifs GTK restent à effectuer. Le diagnostic local existant et les requêtes de paquets devront être vérifiés ensemble sur la cible autorisée.
 
 Avant toute future application, il faudra relire l’état, présenter la transaction exacte et les changements de configuration, sauvegarder ce qui doit l’être et obtenir une autorisation explicite pour les interventions concernées. L’empreinte incluse dans le plan identifie le constat actuel ; elle ne remplace pas cette relecture ni cette autorisation.
 

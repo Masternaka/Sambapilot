@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sambapilot"
 version = "0.1.0.dev0"
-description = "Gestionnaire Samba pour Omarchy — socle de diagnostic"
+description = "Diagnostic et préparation Samba pour Arch Linux, Debian et Fedora"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
@@ -16,3 +16,6 @@ sambapilot = "sambapilot.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["sambapilot*"]
+
+[tool.setuptools.package-data]
+sambapilot = ["assets/icons/*.png", "assets/icons/hicolor/*/apps/*.png"]

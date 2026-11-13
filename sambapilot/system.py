@@ -78,13 +78,6 @@ class HostProbe:
         except OSError:
             return "", "Lecture de /etc/os-release impossible."
 
-    def omarchy_marker(self) -> Observation:
-        try:
-            path = Path.home() / ".local/share/omarchy"
-        except RuntimeError:
-            return Observation("unknown", "Dossier personnel non déterminé.")
-        return observe_path(path, directory=True)
-
     def configuration(self) -> Observation:
         return observe_path(Path("/etc/samba/smb.conf"))
 

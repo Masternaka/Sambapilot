@@ -72,7 +72,7 @@ Les intentions de pare-feu sont testées sans processus, lecture de fichier ou c
 
 Le développement initial est effectué sur macOS avec Python 3.9.6. Les requêtes Linux sont testées avec des résultats simulés ; aucun service réel n’a été interrogé dans ces tests.
 
-Restent à vérifier sur un environnement Omarchy autorisé : les chemins détectés, l’identification de l’environnement, les retours réels de systemd et les restrictions de lecture d’un compte ordinaire.
+Restent à vérifier sur un environnement Linux autorisé : les chemins détectés, l’identification de l’environnement, les retours réels de systemd et les restrictions de lecture d’un compte ordinaire.
 
 Aucune installation de dépendances, modification système, connexion Samba, règle de pare-feu ou interface GTK n’est validée par cette suite. Le conditionnement Python n’a pas été exécuté. Un workflow GitHub Actions est maintenant préparé ; aucune validation CI distante n’a encore été effectuée.
 
@@ -90,7 +90,7 @@ Le workflow est étendu à quatre jobs. Les constructions attendent la réussite
 
 Les quatre tests du générateur vérifient l’empreinte réelle de l’archive et sa préservation, le refus des révisions invalides, le refus d’une source ne correspondant pas à la version et la conservation d’un dossier de sortie existant. La suite locale découvre désormais 213 tests : 192 réussis et 21 ignorés. Le YAML à quatre jobs et le modèle shell sont analysés sans exécuter makepkg ni installer de dépendances.
 
-Les constructions réelles Python et Arch restent en attente d’une première exécution GitHub. Le [guide de distribution](../guides/distribution-omarchy.md) conserve les étapes restantes pour le futur dépôt personnel et la première action de reprise.
+Les constructions réelles Python et Arch restent en attente d’une première exécution GitHub. Le [guide de distribution](../guides/distribution-linux.md) conserve les étapes restantes pour le futur dépôt personnel et la première action de reprise.
 
 ## Partages d’un fichier choisi dans GTK
 
@@ -98,7 +98,7 @@ La page Partages peut afficher les déclarations locales d’une configuration e
 
 Huit tests ordinaires vérifient les détails déclarés sans permissions effectives déduites, l’absence d’héritage global, les listes vides/absentes/ambiguës, les identités partielles, les options avancées sans leurs valeurs brutes, les inventaires bloqués, les sections spéciales, le refus d’un rapport fictif et la préservation d’un fichier temporaire avec BOM et fins de ligne CRLF. Six tests GTK supplémentaires préparent les parcours fichier/exemples, le retour au rapport, l’effacement, les erreurs, les résultats obsolètes, le rechargement et l’annulation ; ils ne sont pas exécutés localement.
 
-La suite découvre désormais 227 tests : 200 réussis et 27 ignorés (23 GTK et 4 Samba). `make check` vérifie la syntaxe de 35 fichiers Python et les 56 liens locaux de 15 documents. Aucun fichier système n’est modifié. Le rendu et le comportement natifs GTK, la CI distante et les essais Omarchy restent à confirmer.
+La suite découvre désormais 227 tests : 200 réussis et 27 ignorés (23 GTK et 4 Samba). `make check` vérifie la syntaxe de 35 fichiers Python et les 56 liens locaux de 15 documents. Aucun fichier système n’est modifié. Le rendu et le comportement natifs GTK, la CI distante et les essais Linux restent à confirmer.
 
 ## Recherche, catégories et préparation directe des déclarations
 
@@ -122,7 +122,7 @@ Le moteur propose une relecture à examiner, liée à la session d’origine, pu
 
 Dix tests ordinaires supplémentaires couvrent la séparation relecture/adoption, la génération ultérieure d’un aperçu, la seconde modification, les sessions distinctes, les structures bloquées, les cibles modifiées, les collisions de noms, le retrait, les lectures refusées et la préservation du BOM/CRLF et des métadonnées de source. Quatre tests GTK sont ajoutés pour la conservation exacte des champs, le parcours complet, les résultats obsolètes après annulation et les refus conservant une saisie invalide ; ils ne sont pas exécutés localement.
 
-Résultat local : 272 tests découverts, 234 réussis et 38 ignorés (34 GTK et 4 Samba). La syntaxe de 38 fichiers Python et les 63 liens locaux de 16 documents sont vérifiés. Les comparaisons restent en mémoire et les fichiers temporaires sont les seules sources modifiées par les tests. Aucune configuration active n’est enregistrée. La validation native GTK/Omarchy et la CI distante restent en attente.
+Résultat local : 272 tests découverts, 234 réussis et 38 ignorés (34 GTK et 4 Samba). La syntaxe de 38 fichiers Python et les 63 liens locaux de 16 documents sont vérifiés. Les comparaisons restent en mémoire et les fichiers temporaires sont les seules sources modifiées par les tests. Aucune configuration active n’est enregistrée. La validation native GTK/Linux et la CI distante restent en attente.
 
 ## Laboratoire de sauvegarde/restauration
 

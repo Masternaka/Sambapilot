@@ -75,9 +75,77 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  profiles:
+    name: Profil Linux ${{ matrix.family }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - family: arch
+            image: archlinux:base-devel
+          - family: debian
+            image: debian:13
+          - family: fedora
+            image: fedora:44
+    container: ${{ matrix.image }}
+    steps:
+      # Installations limitées aux conteneurs temporaires de la CI.
+      - name: Préparer les dépendances du conteneur
+        shell: bash
+        run: |
+          case '${{ matrix.family }}' in
+            arch)
+              pacman -Syu --noconfirm --needed python python-gobject gtk4 samba make git xorg-server-xvfb dbus python-build python-setuptools python-wheel python-pip
+              ;;
+            debian)
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-gi gir1.2-gtk-4.0 samba-common-bin make git xvfb dbus-daemon python3-build python3-setuptools python3-wheel python3-venv
+              ;;
+            fedora)
+              dnf install -y python3 python3-gobject gtk4 samba-common-tools make git xorg-x11-server-Xvfb dbus-daemon python3-build python3-setuptools python3-wheel python3-pip
+              ;;
+          esac
+          mkdir -p /run/samba /var/lib/samba /var/cache/samba
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Vérifier les profils et les suites natives
+        shell: bash
+        env:
+          GDK_BACKEND: x11
+          GSK_RENDERER: cairo
+          GTK_A11Y: none
+          DISPLAY: ':99'
+        run: |
+          make check PYTHON=python3
+          python3 -B scripts/check_linux_profile.py --expected '${{ matrix.family }}'
+          mkdir -p artifacts/verification
+          Xvfb :99 -screen 0 1280x1024x24 -ac -nolisten tcp > artifacts/verification/xvfb.log 2>&1 &
+          xvfb_pid=$!
+          trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
+          sleep 1
+          dbus-run-session -- python3 -B scripts/run_tests.py --require-native --report artifacts/verification/profile.json
+          python3 -m build --no-isolation --outdir "$RUNNER_TEMP/sambapilot-profile-dist"
+          python3 -B scripts/check_distribution.py "$RUNNER_TEMP/sambapilot-profile-dist"
+          python3 -m venv --system-site-packages "$RUNNER_TEMP/sambapilot-profile-venv"
+          "$RUNNER_TEMP/sambapilot-profile-venv/bin/python" -m pip install --no-index --no-deps "$RUNNER_TEMP/sambapilot-profile-dist/"*.whl
+          cd "$RUNNER_TEMP"
+          dbus-run-session -- "$RUNNER_TEMP/sambapilot-profile-venv/bin/python" -I -B "$GITHUB_WORKSPACE/scripts/smoke_installed.py" --gtk > "$GITHUB_WORKSPACE/artifacts/verification/installed.log" 2>&1
+          cat "$GITHUB_WORKSPACE/artifacts/verification/installed.log"
+      - name: Conserver le bilan du profil Linux
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sambapilot-tests-${{ matrix.family }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/verification/
+          if-no-files-found: warn
+          retention-days: 30
+
   package:
     name: Distribution Python
-    needs: [python, native]
+    needs: [python, native, profiles]
     outputs:
       python_artifact_id: ${{ steps.upload_python.outputs.artifact-id }}
     runs-on: ubuntu-24.04
@@ -115,7 +183,7 @@ jobs:
           retention-days: 30
 
   arch:
-    name: Paquet Arch pour Omarchy
+    name: Paquet Arch Linux
     needs: package
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
@@ -151,7 +219,7 @@ jobs:
         run: |
           pacman -U --noconfirm "$RUNNER_TEMP/sambapilot-arch/"*.pkg.tar.zst
           cd "$RUNNER_TEMP"
-          desktop-file-validate /usr/share/applications/sambapilot.desktop
+          desktop-file-validate /usr/share/applications/io.github.sambapilot.SambaPilot.desktop
           /usr/bin/python -I -B "$GITHUB_WORKSPACE/scripts/smoke_installed.py"
       - name: Préparer les fichiers téléchargeables
         run: |

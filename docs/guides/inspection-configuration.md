@@ -63,7 +63,7 @@ Les champs JSON `missing_fields` et `ambiguous_fields` identifient les paramètr
 
 La lecture est testée avec des fichiers temporaires, notamment pour les droits refusés, les fichiers spéciaux, la taille, l’encodage, les changements de contenu et l’absence de modification du fichier lu. Le traitement des configurations et la sortie terminal sont testés automatiquement.
 
-L’ouverture du sélecteur et le rendu GTK restent à vérifier dans une session graphique autorisée. La lecture de la configuration réelle de l’ordinateur Omarchy n’a pas été effectuée pendant le développement.
+L’ouverture du sélecteur et le rendu GTK restent à vérifier dans une session graphique autorisée. La lecture de la configuration réelle de l’ordinateur Linux n’a pas été effectuée pendant le développement.
 
 La lecture est reliée aux plans en mémoire, avec relecture du fichier avant chaque aperçu. Le [contrôle explicite des candidats avec testparm](validation-samba.md) est codé pour un sous-ensemble prudent, mais son exécution réelle reste à vérifier. Restent à développer : l’interprétation de la configuration effective avec Samba et la collecte prudente des permissions Linux. Aucune de ces étapes n’autorise une installation ou une modification système sans accord explicite.
 

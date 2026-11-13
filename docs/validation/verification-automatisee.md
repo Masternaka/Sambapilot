@@ -2,20 +2,25 @@
 
 ## Objectif et état
 
-La CI et les essais natifs sont préparés pour faire avancer SambaPilot sans nécessiter immédiatement un ordinateur Omarchy disponible. Le workflow [ci.yml](../../.github/workflows/ci.yml) contient quatre jobs. Sa présence dans le dépôt ne signifie pas qu’il a été exécuté : aucune publication ni exécution distante n’a eu lieu pendant cette préparation.
+La CI et les essais natifs sont préparés pour faire avancer SambaPilot sans nécessiter immédiatement un ordinateur Linux disponible. Le workflow [ci.yml](../../.github/workflows/ci.yml) contient cinq jobs, dont une matrice des trois distributions. Sa présence dans le dépôt ne signifie pas qu’il a été exécuté : aucune publication ni exécution distante n’a eu lieu pendant cette préparation.
 
 | Job | Vérifications prévues |
 | --- | --- |
 | Python | Syntaxe, liens locaux, tests ordinaires, bilans JSON et démonstrations sous Python 3.9, 3.12 et 3.14 sur Ubuntu 24.04. |
-| Linux natif | Tests ordinaires, 34 tests GTK activés sous Xvfb et 4 tests avec le vrai `testparm`, avec le Python système Ubuntu et un contrôle strict refusant les tests natifs ignorés. |
+| Linux natif | Tests ordinaires, 38 tests GTK activés sous Xvfb et 4 tests avec le vrai `testparm`, avec le Python système Ubuntu et un contrôle strict refusant les tests natifs ignorés. |
+| Profils Linux | Arch, Debian 13 et Fedora 44 : requêtes réelles de paquets, syntaxe/liens, suite native stricte, construction Python puis contrôle du wheel installé avec GTK sous Xvfb/D-Bus. |
 | Distribution | Après réussite des tests : sources, wheel reconstruit depuis ces sources, contenu des archives, installation temporaire et commandes, export et simulation lancés hors du dépôt ; fichiers conservés comme artefact. |
 | Arch | Construction depuis l’archive source vérifiée, tests et installation dans un conteneur Arch temporaire, puis conservation du paquet `.pkg.tar.zst`. |
 
-Le workflow est prévu pour les push, pull requests et lancements manuels, après sa publication autorisée. Il conserve les constructions réussies comme artefacts GitHub pendant 30 jours, sans créer de release ni alimenter un dépôt pacman. Son accès au contenu du dépôt reste en lecture seule. Le [guide de distribution Omarchy](../guides/distribution-omarchy.md) décrit les fichiers obtenus et la préparation du futur dépôt personnel.
+Le workflow est prévu pour les push, pull requests et lancements manuels, après sa publication autorisée. Il conserve les constructions réussies comme artefacts GitHub pendant 30 jours, sans créer de release ni alimenter un dépôt pacman. Son accès au contenu du dépôt reste en lecture seule. Le [guide de distribution Python et Arch](../guides/distribution-linux.md) décrit les fichiers obtenus et la préparation du futur dépôt personnel.
 
 ## Effets limités aux runners GitHub
 
 Le job natif installe GTK4, PyGObject, Xvfb, les outils de session D-Bus et `samba-common-bin` sur le runner temporaire. Il prépare également les dossiers Samba par défaut `/run/samba`, `/var/lib/samba` et `/var/cache/samba` pour permettre le contrôle de configuration sans installer ni démarrer le serveur Samba.
+
+Le job profils installe ses dépendances uniquement dans les conteneurs éphémères Arch, Debian et Fedora. Il consulte leurs bases de paquets avec les adaptateurs du projet, puis exécute les tests natifs. Le service systemd peut rester indisponible dans un conteneur ; ces essais ne prouvent pas le démarrage d’un service sur une machine cible.
+
+Ce job construit aussi les sources et le wheel avec les outils de construction du conteneur, sans isolation de construction ni téléchargement Python supplémentaire. Il contrôle les archives, crée un environnement virtuel temporaire donnant accès au GTK système et installe uniquement le wheel local avec `--no-index --no-deps`. Le contrôle du paquet installé est lancé hors du dépôt, avec `-I -B` et `--gtk`. Aucune étape ne transforme cet environnement temporaire en installation utilisateur.
 
 Le job distribution installe les outils de construction Python sur son runner et SambaPilot dans un environnement virtuel situé dans son dossier temporaire. Le job Arch met à jour son conteneur, installe les outils et dépendances, crée un compte temporaire de construction et installe le paquet construit dans ce conteneur pour vérifier les commandes. Aucun de ces jobs n’intervient sur l’ordinateur de l’utilisateur.
 
@@ -41,11 +46,15 @@ Le lanceur accepte `--report /chemin/vers/nouveau-bilan.json` dans un dossier d�
 
 La CI conserve un bilan par version de Python et un bilan natif, même si les tests échouent. Si la préparation du runner échoue avant le lanceur, le bilan peut manquer : les logs restent nécessaires. Ces bilans ne contiennent pas le contenu des fichiers de test ni les clés ou réglages de la machine.
 
-`scripts/smoke_installed.py` est réservé à un paquet déjà installé dans le runner ou conteneur autorisé. Il refuse les sources du dépôt, compare les versions, exécute le point d’entrée installé et les commandes fictives, puis contrôle l’export Markdown et le laboratoire de sauvegarde sur des données temporaires. Il ne constitue pas un essai graphique du paquet installé.
+`scripts/smoke_installed.py` est réservé à un paquet déjà installé dans le runner ou conteneur autorisé. Il refuse les sources du dépôt, compare les versions, contrôle les huit tailles d’icône, exécute le point d’entrée installé et les commandes fictives, puis contrôle l’export Markdown et le laboratoire de sauvegarde sur des données temporaires. Il vérifie également les trois profils fictifs et le dépannage. Sans `--gtk`, il ne charge pas GTK.
+
+L’option explicite `--gtk` exige une session graphique et GTK déjà disponibles. Elle enregistre l’application, crée sa fenêtre et ses huit pages, vérifie les profils et les symptômes fictifs, décode les huit PNG avec GDK et exige que GTK résolve le nom de l’icône. Elle ferme ensuite la fenêtre et invalide les consultations en attente. Un problème est un échec, jamais un test ignoré. Ces contrôles portent sur la construction des widgets et les ressources ; ils ne prouvent ni la qualité du rendu, ni l’accessibilité complète, ni l’association au lanceur du bureau.
+
+Chaque profil conserve le résultat du contrôle installé dans `installed.log`, à côté de `profile.json` et de `xvfb.log`, dans son artefact `sambapilot-tests-<distribution>-<commit>-<tentative>`. Ce log peut manquer si une étape antérieure a échoué : consulter alors les logs du job. Les contrôles de ce lot restent à exécuter en CI.
 
 Les artefacts de construction sont nommés par commit et tentative. Le job Python expose l’identifiant de son artefact et le job Arch le télécharge précisément, y compris lors d’une relance partielle conservant les sorties d’un job déjà réussi. Aucun de ces transferts n’est testé à distance pendant cette préparation.
 
-Voir le [bilan actuel](validation-socle.md) et la [recette Omarchy](recette-omarchy.md).
+Voir le [bilan actuel](validation-socle.md) et la [recette Linux](recette-linux.md).
 
 ## Tests natifs optionnels
 
@@ -60,7 +69,7 @@ Le contrôle Samba utilise uniquement des configurations fictives et des fichier
 
 Le programme `testparm` peut tenir compte de chemins et de valeurs compilés dans Samba. Ses répertoires système par défaut doivent donc déjà exister dans l’environnement de test. Un refus de ce programme reste un échec à examiner ; ces tests ne créent pas ces répertoires localement pour contourner l’erreur.
 
-Les tests GTK demandent une session graphique accessible. Chaque test enregistre une application avec un identifiant unique : `NON_UNIQUE` seul ne prévient pas les collisions de chemins D-Bus dans un même processus. Les nettoyages sont enregistrés dès la création des ressources, y compris si la préparation du test échoue ensuite. En CI, Xvfb fournit un affichage X11 virtuel avec un rendu logiciel ; cela ne valide pas Wayland, Hyprland, le thème Omarchy, les interactions visuelles ou l’accessibilité complète.
+Les tests GTK demandent une session graphique accessible. Chaque test enregistre une application avec un identifiant unique : `NON_UNIQUE` seul ne prévient pas les collisions de chemins D-Bus dans un même processus. Les nettoyages sont enregistrés dès la création des ressources, y compris si la préparation du test échoue ensuite. En CI, Xvfb fournit un affichage X11 virtuel avec un rendu logiciel ; cela ne valide pas Wayland, les thèmes des trois distributions, les interactions visuelles ou l’accessibilité complète.
 
 ## Vérification de distribution
 
@@ -76,9 +85,9 @@ Cette dernière commande lit les archives sans les extraire ni installer le paqu
 
 La construction locale n’a pas été exécutée : setuptools 58.0.4 est disponible sur la machine de développement, alors que le projet exige au moins 61, et le module `build` est absent. Aucun outil n’a été installé ou mis à jour pour contourner cette limite. La vérification complète du conditionnement reste donc en attente du job CI.
 
-## Première reprise sur Omarchy
+## Première reprise sur Linux
 
-Après une exécution CI réussie, vérifier dans une session Omarchy autorisée le lancement GTK4 sous Wayland, les formulaires, la sélection de fichiers et les retours réels des sondes en lecture seule. La gestion des comptes, ACL, services et pare-feu ainsi que les accès depuis un autre appareil restent des validations distinctes.
+Après une exécution CI réussie, vérifier dans une session Linux autorisée le lancement GTK4 sous Wayland, les formulaires, la sélection de fichiers et les retours réels des sondes en lecture seule. La gestion des comptes, ACL, services et pare-feu ainsi que les accès depuis un autre appareil restent des validations distinctes.
 
 Références utilisées pour préparer le workflow : [setup-python](https://github.com/actions/setup-python/tree/v6), [checkout](https://github.com/actions/checkout/tree/v5), [GTK4 dans Ubuntu 24.04](https://packages.ubuntu.com/noble/gir1.2-gtk-4.0), [outils Samba](https://packages.ubuntu.com/noble/samba-common-bin), [construction Python](https://build.pypa.io/en/stable/explanation/how-it-works.html) et [contenu des distributions setuptools](https://setuptools.pypa.io/en/latest/userguide/miscellaneous.html).
 

@@ -22,7 +22,7 @@ python3 -B -m sambapilot.backup_simulation --demo
 
 `--demo` est obligatoire. Aucun argument `--config`, chemin source ou destination n’est accepté. La commande crée uniquement son propre dossier temporaire, affiche une comparaison fictive et le résultat, puis supprime ce dossier et ses sauvegardes à la fin. Elle n’installe aucune dépendance.
 
-Codes de sortie : `0` si le scénario se termine ; `2` pour des arguments invalides ou un échec de simulation. Un code `0` ne valide pas une restauration sur Omarchy.
+Codes de sortie : `0` si le scénario se termine ; `2` pour des arguments invalides ou un échec de simulation. Un code `0` ne valide pas une restauration sur Linux.
 
 ## Parcours vérifié
 

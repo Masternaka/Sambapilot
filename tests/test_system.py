@@ -95,16 +95,15 @@ class SystemTests(unittest.TestCase):
         result = Mock(returncode=0, stdout="LoadState=loaded\nActiveState=active\nUnitFileState=enabled\n")
         with patch("sambapilot.system.platform.system", return_value="Linux"), \
                 patch.object(HostProbe, "os_release", return_value=('ID=arch', None)), \
-                patch.object(HostProbe, "omarchy_marker"), \
                 patch.object(HostProbe, "configuration"), \
                 patch.object(Path, "is_file", return_value=True), \
                 patch("sambapilot.system.os.access", return_value=True), \
                 patch("sambapilot.system.subprocess.run", return_value=result) as runner:
             report = collect(HostProbe())
-        self.assertTrue(report.environment.arch_based)
-        self.assertEqual(runner.call_count, len(SERVICES))
+        self.assertEqual(report.environment.distribution_family, "arch")
+        self.assertEqual(runner.call_count, len(report.services))
         self.assertEqual([call.args[0] for call in runner.call_args_list],
-                         [service_command(name) for name in SERVICES])
+                         [service_command(item.name) for item in report.services])
 
     def test_absent_systemctl_does_not_launch_anything(self):
         with patch.object(Path, "is_file", return_value=False), \

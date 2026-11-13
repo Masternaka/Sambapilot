@@ -1,5 +1,6 @@
 include README.md AGENTS.md Makefile pyproject.toml MANIFEST.in .gitignore
 recursive-include sambapilot *.py
+recursive-include sambapilot/assets *.png
 recursive-include tests *.py
 recursive-include scripts *.py
 recursive-include docs *.md

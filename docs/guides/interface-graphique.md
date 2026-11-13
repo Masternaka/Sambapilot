@@ -22,9 +22,13 @@ Si PyGObject, GTK ou la session graphique sont indisponibles, la commande affich
 
 ## Navigation
 
+Le [diagnostic et dépannage](diagnostic-depannage.md) du tableau de bord propose trois distributions fictives et un bouton de lecture locale explicite. Une consultation locale ne remplace pas les sources des autres pages.
+
+L’application utilise l’icône « dossier connecté » : un dossier bleu avec trois nœuds turquoise. Les PNG transparents sont inclus dans le paquet Python ; GTK les recherche dans ses ressources locales, sans copier de fichier dans le thème de l’utilisateur. Le [guide des icônes](icones-application.md) décrit les fichiers et les limites de validation.
+
 | Rubrique | Fonctions de cette version |
 | --- | --- |
-| Tableau de bord | Indicateurs fictifs, état du service d’exemple, accès direct à la matrice et au conflit de permissions. |
+| Tableau de bord | Diagnostic local demandé, exemples Arch/Debian/Fedora, dépannage selon le symptôme et raccourcis vers les accès fictifs. |
 | Installation | Plans descriptifs d’exemple ou constat local explicitement demandé, sans installation. |
 | Partages | Exemples fictifs ou déclarations d’un fichier choisi, détails, source et empreinte, rechargement explicite et accès au rapport de préparation. Les actions des exemples restent disponibles après retour à la démonstration. |
 | Utilisateurs et accès | Matrice, filtres par compte et partage, recherche par nom ou chemin, filtre des conflits et détail de la ligne sélectionnée. |
@@ -101,7 +105,7 @@ SAMBAPILOT_GTK_TESTS=1 python3 -B -m unittest discover -s tests -p 'test_gtk_int
 
 Vérifier aussi manuellement :
 
-1. La lisibilité à différentes tailles de fenêtre et avec le thème Omarchy.
+1. La lisibilité à différentes tailles de fenêtre et avec les thèmes des trois distributions.
 2. Le parcours au clavier dans la barre latérale et les filtres.
 3. Le bouton « Examiner les conflits » et le détail de `alex / Famille`.
 4. Le filtrage d’un partage et la recherche sans résultat, puis la réinitialisation.

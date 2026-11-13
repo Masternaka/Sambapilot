@@ -4,11 +4,12 @@ from dataclasses import asdict, dataclass
 import shlex
 from typing import Optional, Protocol, Tuple
 
+from .distributions import FIREWALL_SERVICES, PROFILES, identify_profile
 
-TOOLS = ("pacman", "smbd", "testparm", "smbpasswd", "smbclient", "systemctl",
+
+TOOLS = ("pacman", "dpkg-query", "rpm", "smbd", "testparm", "smbpasswd", "smbclient", "systemctl",
          "ufw", "firewall-cmd", "nft", "iptables")
-SERVICES = ("smb.service", "nmb.service", "ufw.service", "firewalld.service",
-            "nftables.service")
+SERVICES = tuple(dict.fromkeys(name for profile in PROFILES.values() for name in profile.services)) + FIREWALL_SERVICES
 
 
 @dataclass(frozen=True)
@@ -38,8 +39,9 @@ class Environment:
     system: str
     distribution_id: str
     distribution_name: str
-    arch_based: bool
-    omarchy_marker: Observation
+    distribution_family: str
+    package_manager: Optional[str]
+    samba_service: Optional[str]
 
 
 @dataclass(frozen=True)
@@ -63,7 +65,6 @@ class Probe(Protocol):
 
     def system(self) -> str: ...
     def os_release(self) -> Tuple[str, Optional[str]]: ...
-    def omarchy_marker(self) -> Observation: ...
     def configuration(self) -> Observation: ...
     def tool(self, name: str) -> Optional[str]: ...
     def service(self, name: str) -> Service: ...
@@ -96,11 +97,10 @@ def collect(probe: Probe) -> Report:
         "Les règles effectives du pare-feu et l'accès depuis un autre appareil ne sont pas vérifiés.",
     ]
     if system != "Linux":
-        notes.append("Environnement non pris en charge : le diagnostic système cible Linux/Omarchy.")
+        notes.append("Environnement non pris en charge : le diagnostic système cible Arch, Debian et Fedora sous Linux.")
         return Report(
-            1, probe.mode,
-            Environment(system, "unknown", "Non vérifiée", False,
-                        Observation("not-checked", "Recherche réservée à Linux.")),
+            2, probe.mode,
+            Environment(system, "unknown", "Non vérifiée", "unknown", None, None),
             (), Observation("not-checked", "Recherche réservée à Linux."), (), tuple(notes),
         )
 
@@ -111,19 +111,20 @@ def collect(probe: Probe) -> Report:
     if "ID" not in release:
         notes.append("Distribution inconnue : /etc/os-release est absent, inaccessible ou incomplet.")
     distribution_id = release.get("ID", "unknown")
-    arch_based = "arch" in {distribution_id, *release.get("ID_LIKE", "").split()}
-    if not arch_based:
-        notes.append("Distribution non identifiée comme Arch : aucune compatibilité Omarchy confirmée.")
-
-    marker = probe.omarchy_marker()
-    if marker.status == "present":
-        notes.append("Le dossier Omarchy est un indice ; sa présence ne certifie pas une installation fonctionnelle.")
+    profile = identify_profile(distribution_id, release.get("ID_LIKE", ""))
+    if profile is None:
+        notes.append("Distribution non reconnue comme Arch, Debian ou Fedora : compatibilité non établie.")
+    elif distribution_id != profile.key:
+        notes.append("Famille détectée par ID_LIKE ; cela ne certifie pas la compatibilité de cette distribution dérivée.")
+    if profile and profile.key == "fedora":
+        notes.append("SELinux peut restreindre les accès Samba ; son état et ses règles ne sont pas consultés.")
     tools = tuple(Tool(name, probe.tool(name)) for name in TOOLS)
-    services = tuple(probe.service(name) for name in SERVICES)
+    services = tuple(probe.service(name) for name in ((profile.services if profile else ()) + FIREWALL_SERVICES))
     notes.append("La configuration Samba est repérée sans lire son contenu ni valider ses partages.")
     return Report(
-        1, probe.mode,
+        2, probe.mode,
         Environment(system, distribution_id, release.get("PRETTY_NAME", distribution_id),
-                    arch_based, marker),
+                    profile.key if profile else "unknown", profile.package_manager if profile else None,
+                    profile.services[0] if profile else None),
         tools, probe.configuration(), services, tuple(notes),
     )
