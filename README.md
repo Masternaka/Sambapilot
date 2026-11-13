@@ -1,3 +1,5 @@
+![Icône de SambaPilot : dossier bleu avec trois nœuds réseau turquoise](sambapilot/assets/icons/hicolor/128x128/apps/io.github.sambapilot.SambaPilot.png)
+
 # SambaPilot
 
 SambaPilot prépare un utilitaire de gestion des partages Samba pour **Arch Linux, Debian et Fedora**. Le terminal et l’interface graphique GTK reposent sur le même moteur Python. Les profils des trois distributions sont implémentés ; leur validation native reste à confirmer. Voir la [compatibilité Linux](docs/guides/compatibilite-linux.md).
