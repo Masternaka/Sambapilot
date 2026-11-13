@@ -4,6 +4,10 @@
 
 Le dernier commit publié avant ce lot, `74754ba`, a une [CI réussie](https://github.com/Masternaka/Sambapilot/actions/runs/43435734134). Ce résultat ne couvre pas les nouvelles fiches, profils et volumes encore locaux au moment de cette vérification.
 
+Le lot fonctionnel est désormais publié dans `9c94a73` et ses [neuf jobs CI ont réussi](https://github.com/Masternaka/Sambapilot/actions/runs/43452014577) : Python 3.9/3.12/3.14, GTK4 et Samba natifs, profils Arch/Debian/Fedora, distribution Python et paquet Arch. Les suites natives exigent tous les **426 tests sans aucun test ignoré**. Chaque profil contrôle aussi les métadonnées d'un dossier temporaire Linux et le paquet installé hors du dépôt, avec ses parcours GTK fictifs. Les artefacts Python, Arch et les bilans de contrôle ont été conservés par le workflow.
+
+Ces résultats remplacent l'attente de CI exprimée dans les comptes rendus historiques des lots ci-dessous. Ils ne valident ni le rendu sur le poste de l'utilisateur, ni un disque réel, ni les permissions et connexions Samba depuis ses appareils. Aucune release, publication de dépôt de paquets ou intervention système sur son ordinateur n'a été effectuée.
+
 La stabilisation ajoute un [parcours manuel court](recette-linux.md), harmonise les boutons « Préparer les adresses… » avec leur comportement sans connexion et répartit verticalement les commandes de volume de la fiche pour réduire la largeur nécessaire. Le rendu, le clavier et le presse-papiers restent à examiner sur une session Linux réelle.
 
 ## Diagnostic par partage — 13 novembre 2026
