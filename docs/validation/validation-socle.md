@@ -1,5 +1,15 @@
 # Bilan de validation de SambaPilot
 
+## Correction du contrôleur CI — 13 novembre 2026
+
+Le [run GitHub 43431525423](https://github.com/Masternaka/Sambapilot/actions/runs/43431525423), sur le commit `44fef000f640fadae94bdfe80299fbccc16dc9ea`, est examiné à partir du journal fourni et des trois artefacts de profils téléchargés en lecture seule. Les bilans `profile.json` d’Arch, Debian et Fedora indiquent chacun **338 tests réussis, aucun test ignoré, aucune erreur**, avec `native_required: true` (38 tests GTK et 4 Samba). La construction des archives, leur contrôle et l’installation du wheel réussissent également avant l’étape suivante.
+
+Les trois fichiers `installed.log` contiennent la même exception : `AttributeError: 'tuple' object has no attribute 'gtk'`, dans `smoke_installed.py`. Une boucle de commandes réutilisait `args`, qui contenait auparavant les options argparse ; la lecture de `args.gtk` échouait après les commandes terminal. Le contrôle GTK du paquet installé n’était donc pas atteint. Les jobs Distribution Python et Paquet Arch sont ignorés à cause de cette dépendance en échec.
+
+La correction sépare `options` et `command_args`. Deux tests de régression parcourent le contrôleur avec et sans `--gtk`, en simulant les appels de processus et la frontière du paquet installé ; ils vérifient que les options survivent aux boucles. Ils ne constituent aucune installation ou validation GTK locale. Le workflow affiche désormais `installed.log` même en cas d’échec, tout en restituant le code de sortie d’origine.
+
+Après correction, `make test` traite **340 tests : 298 réussis et 42 natifs ignorés**, sans erreur ni échec. `make check` et `git diff --check` passent. La syntaxe des blocs shell est contrôlée sans exécuter les installations ; un processus factice vérifie aussi l’affichage du journal et la propagation d’un code d’échec. Aucun logiciel installé sur la machine, aucun commit/push ni relance GitHub réalisé. La correction et la suite du contrôle GTK installé restent à confirmer après un nouveau push autorisé.
+
 ## Contrôle du paquet installé — 13 novembre 2026
 
 La prochaine étape de validation est préparée dans les trois profils CI : construction du wheel et des sources, contrôle des archives, installation du wheel local dans un environnement virtuel temporaire, puis contrôle GTK du paquet installé hors du dépôt. L’option `--gtk` de `smoke_installed.py` exige la création de la fenêtre et des huit pages, les trois profils fictifs, les trois symptômes, le décodage GDK des huit PNG et la résolution de l’icône par GTK. Sans cette option, GTK reste non chargé.

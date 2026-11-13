@@ -1,10 +1,13 @@
 import importlib.util
+import contextlib
+import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
 import struct
 import zlib
+import subprocess
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts/run_tests.py'
 spec = importlib.util.spec_from_file_location('test_runner_support', SCRIPT)
@@ -153,3 +156,41 @@ class InstalledIconChecks(unittest.TestCase):
                 self.icon_path(32).write_bytes(data)
                 with self.assertRaisesRegex(RuntimeError, 'en-tête invalide'):
                     smoke.check_icons(self.root)
+
+
+class InstalledSmokeFlowTests(unittest.TestCase):
+    """Flux simulé du contrôleur, sans installation ni lancement de GTK."""
+
+    def simulate_process(self, command, **_kwargs):
+        from sambapilot import __version__
+        from sambapilot.cli import main
+        if command[1:] == ['--version']:
+            return subprocess.CompletedProcess(command, 0, stdout='sambapilot ' + __version__)
+        module_index = command.index('-m') + 1
+        if command[module_index] == 'sambapilot.backup_simulation':
+            # Le laboratoire possède sa propre suite ; aucun sous-processus réel ici.
+            return subprocess.CompletedProcess(command, 0, stdout='simulation')
+        self.assertEqual(command[module_index], 'sambapilot')
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            code = main(command[module_index + 1:])
+        self.assertEqual(code, 0)
+        return subprocess.CompletedProcess(command, code, stdout=output.getvalue())
+
+    def check_flow(self, arguments):
+        from unittest.mock import patch
+        from sambapilot import __version__
+        with tempfile.TemporaryDirectory(prefix='sambapilot-smoke-flow-') as directory, \
+                patch.object(smoke, 'ROOT', Path(directory) / 'source-fictive'), \
+                patch.object(smoke.metadata, 'version', return_value=__version__), \
+                patch.object(smoke, 'check_icons', return_value=('icones-fictives',)), \
+                patch.object(smoke.subprocess, 'run', side_effect=self.simulate_process), \
+                patch.object(smoke, 'check_gtk') as native, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(smoke.main(arguments), 0)
+        return native
+
+    def test_command_loops_preserve_explicit_gtk_option(self):
+        self.check_flow(['--gtk']).assert_called_once_with(('icones-fictives',))
+
+    def test_default_flow_finishes_without_loading_gtk(self):
+        self.check_flow([]).assert_not_called()

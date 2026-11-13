@@ -2,7 +2,7 @@
 
 ## Objectif et état
 
-La CI et les essais natifs sont préparés pour faire avancer SambaPilot sans nécessiter immédiatement un ordinateur Linux disponible. Le workflow [ci.yml](../../.github/workflows/ci.yml) contient cinq jobs, dont une matrice des trois distributions. Sa présence dans le dépôt ne signifie pas qu’il a été exécuté : aucune publication ni exécution distante n’a eu lieu pendant cette préparation.
+La CI et les essais natifs permettent de vérifier SambaPilot sans ordinateur Linux local. Le workflow [ci.yml](../../.github/workflows/ci.yml) contient cinq jobs, dont une matrice des trois distributions. Le run du 13 novembre confirme les 338 tests de sa version sur Arch, Debian et Fedora, puis échoue dans le contrôleur du paquet installé avant son contrôle GTK. La correction locale attend un nouveau run ; voir le [bilan de validation](validation-socle.md).
 
 | Job | Vérifications prévues |
 | --- | --- |
@@ -50,7 +50,7 @@ La CI conserve un bilan par version de Python et un bilan natif, même si les te
 
 L’option explicite `--gtk` exige une session graphique et GTK déjà disponibles. Elle enregistre l’application, crée sa fenêtre et ses huit pages, vérifie les profils et les symptômes fictifs, décode les huit PNG avec GDK et exige que GTK résolve le nom de l’icône. Elle ferme ensuite la fenêtre et invalide les consultations en attente. Un problème est un échec, jamais un test ignoré. Ces contrôles portent sur la construction des widgets et les ressources ; ils ne prouvent ni la qualité du rendu, ni l’accessibilité complète, ni l’association au lanceur du bureau.
 
-Chaque profil conserve le résultat du contrôle installé dans `installed.log`, à côté de `profile.json` et de `xvfb.log`, dans son artefact `sambapilot-tests-<distribution>-<commit>-<tentative>`. Ce log peut manquer si une étape antérieure a échoué : consulter alors les logs du job. Les contrôles de ce lot restent à exécuter en CI.
+Chaque profil conserve le résultat du contrôle installé dans `installed.log`, à côté de `profile.json` et de `xvfb.log`, dans son artefact `sambapilot-tests-<distribution>-<commit>-<tentative>`. Le workflow affiche aussi ce journal en cas d’échec et propage le code de sortie du contrôleur, sans masquer l’échec. Le log peut manquer si une étape antérieure a échoué : consulter alors les logs du job. Le contrôle GTK du paquet installé reste à confirmer après la correction du contrôleur.
 
 Les artefacts de construction sont nommés par commit et tentative. Le job Python expose l’identifiant de son artefact et le job Arch le télécharge précisément, y compris lors d’une relance partielle conservant les sorties d’un job déjà réussi. Aucun de ces transferts n’est testé à distance pendant cette préparation.
 

@@ -102,7 +102,7 @@ make check
 make demo
 ```
 
-Au **13 novembre 2026**, sur macOS : **296 tests réussis et 42 tests natifs ignorés** (338 découverts : 38 GTK et 4 Samba ignorés). Les tests ordinaires utilisent des sondes simulées et des fichiers temporaires ; ils ne nécessitent ni Samba, ni systemd, ni droits administrateur. Le [bilan actuel](docs/validation/validation-socle.md) précise les autres contrôles et leurs limites.
+Au **13 novembre 2026**, sur macOS après correction du contrôleur CI : **298 tests réussis et 42 tests natifs ignorés** (340 découverts : 38 GTK et 4 Samba ignorés). Le run GitHub précédent confirme les 338 tests de sa version, tous réussis sur Arch, Debian et Fedora, avant un échec du contrôleur de paquet installé. La correction attend un nouveau run. Les tests ordinaires locaux utilisent des sondes simulées et des fichiers temporaires ; ils ne nécessitent ni Samba, ni systemd, ni droits administrateur. Le [bilan actuel](docs/validation/validation-socle.md) précise les preuves et leurs limites.
 
 Un workflow GitHub Actions prépare les vérifications Python, GTK4, Samba et distribution. Après chaque push et réussite des contrôles, il construit les archives Python puis le paquet Arch `.pkg.tar.zst` et les conserve comme artefacts pendant 30 jours. La version modifiée du workflow n’a pas été exécutée pendant cette intervention ; le conditionnement et les essais natifs restent à valider. Les essais Linux, pare-feu et connexion depuis un autre appareil restent également à effectuer. Voir le [bilan de validation](docs/validation/validation-socle.md).
 

@@ -81,7 +81,7 @@ def check_gtk(icons):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--gtk', action='store_true', help='Exiger le démarrage GTK et le décodage natif des icônes, sans installation.')
-    args = parser.parse_args(argv)
+    options = parser.parse_args(argv)
     import sambapilot
     from sambapilot.demo import demo_configuration
     if ROOT in Path(sambapilot.__file__).resolve().parents:
@@ -123,9 +123,9 @@ def main(argv=None):
         plan = json.loads(command('plan-partage', '--demo', '--action', 'remove', '--name', 'Medias', '--json'))
         if plan['can_apply'] is not False:
             raise RuntimeError('Le plan installé ne doit pas être applicable.')
-        for args in (('preparer-installation', '--demo', '--json'),
+        for command_args in (('preparer-installation', '--demo', '--json'),
                      ('plan-pare-feu', '--manager', 'ufw', '--interface', 'enp3s0', '--source', '192.168.1.0/24', '--json')):
-            if json.loads(command(*args))['can_apply'] is not False:
+            if json.loads(command(*command_args))['can_apply'] is not False:
                 raise RuntimeError('La préparation installée doit rester descriptive.')
         preview = command('examiner-config', '--config', str(source), '--markdown')
         if not preview.startswith('# SambaPilot'):
@@ -136,7 +136,7 @@ def main(argv=None):
             raise RuntimeError('Le rapport installé ne contient pas les déclarations attendues.')
         subprocess.run([sys.executable, '-I', '-B', '-m', 'sambapilot.backup_simulation', '--demo'],
                        cwd=work, capture_output=True, text=True, timeout=15, check=True)
-    if args.gtk:
+    if options.gtk:
         check_gtk(icons)
     print('Paquet installé vérifié : versions, commandes fictives, aperçu/export et simulation de sauvegarde.')
     return 0

@@ -132,8 +132,10 @@ jobs:
           python3 -m venv --system-site-packages "$RUNNER_TEMP/sambapilot-profile-venv"
           "$RUNNER_TEMP/sambapilot-profile-venv/bin/python" -m pip install --no-index --no-deps "$RUNNER_TEMP/sambapilot-profile-dist/"*.whl
           cd "$RUNNER_TEMP"
-          dbus-run-session -- "$RUNNER_TEMP/sambapilot-profile-venv/bin/python" -I -B "$GITHUB_WORKSPACE/scripts/smoke_installed.py" --gtk > "$GITHUB_WORKSPACE/artifacts/verification/installed.log" 2>&1
+          installed_status=0
+          dbus-run-session -- "$RUNNER_TEMP/sambapilot-profile-venv/bin/python" -I -B "$GITHUB_WORKSPACE/scripts/smoke_installed.py" --gtk > "$GITHUB_WORKSPACE/artifacts/verification/installed.log" 2>&1 || installed_status=$?
           cat "$GITHUB_WORKSPACE/artifacts/verification/installed.log"
+          exit "$installed_status"
       - name: Conserver le bilan du profil Linux
         if: always()
         uses: actions/upload-artifact@v7
