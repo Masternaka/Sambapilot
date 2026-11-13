@@ -7,7 +7,7 @@ La CI et les essais natifs permettent de vérifier SambaPilot sans ordinateur Li
 | Job | Vérifications prévues |
 | --- | --- |
 | Python | Syntaxe, liens locaux, tests ordinaires, bilans JSON et démonstrations sous Python 3.9, 3.12 et 3.14 sur Ubuntu 24.04. |
-| Linux natif | Tests ordinaires, 38 tests GTK activés sous Xvfb et 4 tests avec le vrai `testparm`, avec le Python système Ubuntu et un contrôle strict refusant les tests natifs ignorés. |
+| Linux natif | Tests ordinaires, 52 tests GTK activés sous Xvfb et 4 tests avec le vrai `testparm`, avec le Python système Ubuntu et un contrôle strict refusant les tests natifs ignorés. |
 | Profils Linux | Arch, Debian 13 et Fedora 44 : requêtes réelles de paquets, syntaxe/liens, suite native stricte, construction Python puis contrôle du wheel installé avec GTK sous Xvfb/D-Bus. |
 | Distribution | Après réussite des tests : sources, wheel reconstruit depuis ces sources, contenu des archives, installation temporaire et commandes, export et simulation lancés hors du dépôt ; fichiers conservés comme artefact. |
 | Arch | Construction depuis l’archive source vérifiée, tests et installation dans un conteneur Arch temporaire, puis conservation du paquet `.pkg.tar.zst`. |
@@ -21,6 +21,8 @@ Le job natif installe GTK4, PyGObject, Xvfb, les outils de session D-Bus et `sam
 Le job profils installe ses dépendances uniquement dans les conteneurs éphémères Arch, Debian et Fedora. Il consulte leurs bases de paquets avec les adaptateurs du projet, puis exécute les tests natifs. Le service systemd peut rester indisponible dans un conteneur ; ces essais ne prouvent pas le démarrage d’un service sur une machine cible.
 
 Ce job construit aussi les sources et le wheel avec les outils de construction du conteneur, sans isolation de construction ni téléchargement Python supplémentaire. Il contrôle les archives, crée un environnement virtuel temporaire donnant accès au GTK système et installe uniquement le wheel local avec `--no-index --no-deps`. Le contrôle du paquet installé est lancé hors du dépôt, avec `-I -B` et `--gtk`. Aucune étape ne transforme cet environnement temporaire en installation utilisateur.
+
+Le contrôle de profil analyse aussi le vrai `/proc/self/mountinfo` du conteneur. Il crée son propre dossier temporaire privé sous `/tmp`, y vérifie un dossier présent, un chemin absent et un lien symbolique refusé, puis nettoie cette fixture. Il ne crée aucun point de montage ni ne consulte un disque utilisateur. Ces vérifications natives restent à confirmer par une exécution CI de ce lot.
 
 Le job distribution installe les outils de construction Python sur son runner et SambaPilot dans un environnement virtuel situé dans son dossier temporaire. Le job Arch met à jour son conteneur, installe les outils et dépendances, crée un compte temporaire de construction et installe le paquet construit dans ce conteneur pour vérifier les commandes. Aucun de ces jobs n’intervient sur l’ordinateur de l’utilisateur.
 
@@ -49,6 +51,14 @@ La CI conserve un bilan par version de Python et un bilan natif, même si les te
 `scripts/smoke_installed.py` est réservé à un paquet déjà installé dans le runner ou conteneur autorisé. Il refuse les sources du dépôt, compare les versions, contrôle les huit tailles d’icône, exécute le point d’entrée installé et les commandes fictives, puis contrôle l’export Markdown et le laboratoire de sauvegarde sur des données temporaires. Il vérifie également les trois profils fictifs et le dépannage. Sans `--gtk`, il ne charge pas GTK.
 
 L’option explicite `--gtk` exige une session graphique et GTK déjà disponibles. Elle enregistre l’application, crée sa fenêtre et ses huit pages, vérifie les profils et les symptômes fictifs, décode les huit PNG avec GDK et exige que GTK résolve le nom de l’icône. Elle ferme ensuite la fenêtre et invalide les consultations en attente. Un problème est un échec, jamais un test ignoré. Ces contrôles portent sur la construction des widgets et les ressources ; ils ne prouvent ni la qualité du rendu, ni l’accessibilité complète, ni l’association au lanceur du bureau.
+
+Le contrôle installé vérifie aussi `fiche-connexion --demo` et son état réseau inconnu. Avec `--gtk`, il prépare une fiche fictive et modifie le serveur pour exiger l’invalidation ; il ne copie rien dans le presse-papiers et ne contacte aucun serveur.
+
+Les trois profils de partage sont aussi contrôlés dans le terminal installé. Le contrôle GTK prépare le profil médias sans identité et exige l’absence de candidat, puis saisit un groupe fictif et demande l’aperçu ; aucune configuration n’est appliquée et aucun `testparm` n’est lancé par ce parcours.
+
+L’examen de volume installé est contrôlé uniquement avec des exemples : point attendu absent dans le terminal, scénario fictif et invalidation après changement de chemin dans GTK. Il n’effectue aucune consultation locale d’un volume depuis la fenêtre de contrôle installée.
+
+Le diagnostic par partage installé est également contrôlé avec des données fictives : déclaration Famille, serveur explicitement fourni, volume simulé absent et invalidation après modification du formulaire. Les contrôles ordinaires ne valident pas son rendu GTK ; le parcours installé ne demande aucune consultation locale de volume ni copie réelle dans le presse-papiers.
 
 Chaque profil conserve le résultat du contrôle installé dans `installed.log`, à côté de `profile.json` et de `xvfb.log`, dans son artefact `sambapilot-tests-<distribution>-<commit>-<tentative>`. Le workflow affiche aussi ce journal en cas d’échec et propage le code de sortie du contrôleur, sans masquer l’échec. Le log peut manquer si une étape antérieure a échoué : consulter alors les logs du job. Le contrôle GTK du paquet installé reste à confirmer après la correction du contrôleur.
 

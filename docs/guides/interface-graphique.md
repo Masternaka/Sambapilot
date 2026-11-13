@@ -24,6 +24,10 @@ Si PyGObject, GTK ou la session graphique sont indisponibles, la commande affich
 
 Le [diagnostic et dépannage](diagnostic-depannage.md) du tableau de bord propose trois distributions fictives et un bouton de lecture locale explicite. Une consultation locale ne remplace pas les sources des autres pages.
 
+Dans **Partages**, chaque exemple et déclaration propose **Préparer les adresses…**. La [fiche de connexion](fiche-connexion.md) demande le serveur, prépare les adresses Windows et SMB, puis permet leur copie explicite. Aucun client réseau n’est lancé. Les changements de serveur ou de source invalident la fiche.
+
+Le bouton **Diagnostic de ce partage…** ouvre la [fiche regroupée](diagnostic-partage.md) : réglages et incertitudes du partage sélectionné, dépannage selon le symptôme, connexion facultative et constat de volume sur demande. Aucun constat local n’est déclenché à l’ouverture. Pour un dossier du fichier choisi, il faut confirmer qu’il appartient à cet ordinateur et préciser le point attendu. La fiche est fermée au changement de source.
+
 L’application utilise l’icône « dossier connecté » : un dossier bleu avec trois nœuds turquoise. Les PNG transparents sont inclus dans le paquet Python ; GTK les recherche dans ses ressources locales, sans copier de fichier dans le thème de l’utilisateur. Le [guide des icônes](icones-application.md) décrit les fichiers et les limites de validation.
 
 | Rubrique | Fonctions de cette version |
@@ -35,7 +39,7 @@ L’application utilise l’icône « dossier connecté » : un dossier bleu ave
 | Préparer un partage | Formulaire, aperçu, vérification de source, contrôle Samba explicite et annulation sans application. |
 | Examiner une configuration | Choix explicite d’un fichier, inventaire en lecture seule, passage à la préparation d’un aperçu et effacement du rapport. |
 | Pare-feu | Formulaire de périmètre déclaré : gestionnaire, interface, sources IPv4/IPv6, zone et NetBIOS optionnel, sans lecture ou application des règles. |
-| Maintenance | États fictifs des services et présentation des sauvegardes et restaurations encore à développer. |
+| Maintenance | Examen du point de montage attendu et du dossier, exemples et lecture locale explicite ; sauvegardes et restaurations réelles encore à développer. |
 
 La mention « Mode démonstration » reste visible sur les pages d’exemples. La rubrique d’examen de configuration affiche « Examen de fichier · Lecture seule » et identifie la source du rapport. Le formulaire sur fichier affiche « Fichier choisi · Aucun enregistrement » et le chemin source. Les droits inconnus sont écrits explicitement. Les couleurs éventuelles du thème ne sont pas nécessaires pour distinguer les résultats.
 

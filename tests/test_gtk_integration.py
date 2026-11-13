@@ -32,6 +32,247 @@ class GtkIntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.window.visible_decisions), 12)
         self.assertIsNotNone(self.window.access_list.get_selected_row())
 
+    def test_share_diagnostic_opens_without_probes_and_copies_only_prepared_address(self):
+        from unittest.mock import Mock, patch
+        with patch('pathlib.Path.open', side_effect=AssertionError('file')), \
+                patch('sambapilot.gtk_share_diagnostic.HostVolumeProbe', side_effect=AssertionError('host')):
+            self.window.open_share_diagnostic('Famille')
+            sheet = self.window.share_diagnostic_window
+            self.addCleanup(sheet.destroy)
+            self.assertIsNone(sheet.prepared.connection)
+            self.assertIsNone(sheet.prepared.volume)
+            sheet.server.set_text('nas.local')
+            self.assertEqual(sheet.prepared.connection.share, 'Famille')
+            clipboard = Mock()
+            with patch('sambapilot.gtk_share_diagnostic.ShareDiagnosticWindow.get_clipboard', return_value=clipboard):
+                sheet.copy_address('macos')
+                clipboard.set.assert_called_once_with('smb://nas.local/Famille')
+            sheet.server.set_text('user:private-secret@nas')
+            self.assertIsNone(sheet.prepared.connection)
+            self.assertFalse(sheet.copy_buttons['macos'].get_sensitive())
+            self.assertNotIn('private-secret', sheet.status.get_text())
+
+    def test_share_diagnostic_demo_volume_is_explicit_and_invalidated_by_form_changes(self):
+        from unittest.mock import patch
+        self.window.open_share_diagnostic('Famille')
+        sheet = self.window.share_diagnostic_window
+        self.addCleanup(sheet.destroy)
+        sheet.mountpoint.set_text('/srv/partages')
+        sheet.volume_scenario.set_selected(1)
+        with patch('sambapilot.gtk_share_diagnostic.HostVolumeProbe', side_effect=AssertionError('host')):
+            sheet.examine_demo()
+        self.assertFalse(sheet.prepared.volume.expected_mounted)
+        sheet.symptom.set_selected(2)
+        self.assertIsNone(sheet.prepared.volume)
+        self.assertEqual(sheet.prepared.symptom, 'readonly')
+
+    def file_share_diagnostic_fixture(self):
+        from pathlib import Path
+        import tempfile
+        from sambapilot.inspection import read_configuration
+        directory = tempfile.TemporaryDirectory(prefix='sambapilot-share-diagnostic-')
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / 'smb.conf'
+        path.write_text('[Docs]\npath = /mnt/docs\n', encoding='utf-8')
+        snapshot = read_configuration(str(path))
+        self.window.file_shares_mode = True
+        self.window.receive_inspection(self.window.inspection_generation, snapshot.inspect(), snapshot=snapshot)
+        self.window.open_share_diagnostic('Docs')
+        sheet = self.window.share_diagnostic_window
+        self.addCleanup(sheet.destroy)
+        return sheet, path, snapshot
+
+    def test_share_diagnostic_local_volume_requires_confirmation_and_discards_old_results(self):
+        from dataclasses import replace
+        from unittest.mock import patch
+        from sambapilot.volumes import DemoVolumeProbe, collect_volume
+        sheet, _path, snapshot = self.file_share_diagnostic_fixture()
+        self.assertEqual(sheet.prepared.read_at, snapshot.read_at)
+        self.assertFalse(sheet.local_button.get_sensitive())
+        sheet.mountpoint.set_text('/mnt')
+        with patch('sambapilot.gtk_share_diagnostic.Thread') as thread:
+            sheet.examine_local()
+            thread.assert_not_called()
+            sheet.local_confirm.set_active(True)
+            sheet.examine_local()
+            thread.assert_called_once()
+        generation = sheet.generation
+        volume = replace(collect_volume('/mnt/docs', '/mnt', DemoVolumeProbe('mounted', '/mnt')), mode='live')
+        sheet.receive_volume(generation, volume)
+        self.assertIs(sheet.prepared.volume, volume)
+        sheet.server.set_text('autre.local')
+        sheet.receive_volume(generation, volume)
+        self.assertIsNone(sheet.prepared.volume)
+
+    def test_share_diagnostic_closes_when_source_is_cleared(self):
+        sheet, _path, _snapshot = self.file_share_diagnostic_fixture()
+        self.window.clear_inspection()
+        self.assertFalse(sheet.active)
+        self.assertIsNone(self.window.share_diagnostic_window)
+
+    def test_share_diagnostic_changed_file_refuses_local_probe_and_invalidates_sheet(self):
+        from unittest.mock import patch
+        sheet, path, _snapshot = self.file_share_diagnostic_fixture()
+        sheet.mountpoint.set_text('/mnt')
+        sheet.local_confirm.set_active(True)
+        path.write_text('[Docs]\npath = /mnt/autre\n', encoding='utf-8')
+        with patch('sambapilot.gtk_share_diagnostic.HostVolumeProbe', side_effect=AssertionError('host')), \
+                patch('sambapilot.gtk_share_diagnostic.GLib.idle_add', side_effect=lambda callback, *args: callback(*args)):
+            sheet.read_local(sheet.generation, '/mnt/docs', '/mnt')
+        self.assertTrue(sheet.source_stale)
+        self.assertIsNone(sheet.prepared)
+        self.assertFalse(sheet.local_button.get_sensitive())
+
+    def test_volume_examples_never_read_host_and_distinguish_missing_mount(self):
+        from unittest.mock import patch
+        page = self.window.volume_page
+        self.window.stack.set_visible_child_name('maintenance')
+        with patch('sambapilot.gtk_volumes.HostVolumeProbe', side_effect=AssertionError('host')), \
+                patch('pathlib.Path.open', side_effect=AssertionError('file')):
+            page.scenario.set_selected(1)
+            self.assertFalse(page.report.expected_mounted)
+            self.assertEqual(page.source, 'demo')
+            self.assertEqual(self.window.mode_label.get_text(), 'Démonstration')
+            page.scenario.set_selected(4)
+            self.assertIsNone(page.report.expected_mounted)
+
+    def test_volume_local_results_are_invalidated_after_path_change_demo_and_close(self):
+        from dataclasses import replace
+        from unittest.mock import patch
+        page = self.window.volume_page
+        local = replace(page.report, mode='live')
+        self.window.stack.set_visible_child_name('maintenance')
+        with patch('sambapilot.gtk_volumes.Thread'):
+            page.examine_local()
+        generation = page.generation
+        self.assertIsNone(page.report)
+        self.assertEqual(self.window.mode_label.get_text(), 'Lecture seule')
+        page.path.set_text('/mnt/medias/autre')
+        self.assertEqual(self.window.mode_label.get_text(), 'À examiner')
+        page.receive_report(generation, local)
+        self.assertIsNone(page.report)
+        page.use_demo()
+        page.receive_report(generation, local)
+        self.assertEqual(page.report.mode, 'demo')
+        page.close()
+        page.receive_report(page.generation - 1, local)
+        self.assertEqual(page.report.mode, 'demo')
+
+    def test_invalid_volume_paths_never_start_local_thread(self):
+        from unittest.mock import patch
+        page = self.window.volume_page
+        page.mountpoint.set_text('/autre')
+        with patch('sambapilot.gtk_volumes.Thread') as thread:
+            page.examine_local()
+            thread.assert_not_called()
+        self.assertIsNone(page.report)
+        self.assertTrue(page.local.get_sensitive())
+
+    def test_share_profile_prefills_creation_without_identity_or_automatic_preview(self):
+        self.window.open_share_plan('create')
+        source = self.window.plan_session.source
+        self.window.share_profile.set_selected(3)
+        self.window.fill_share_profile()
+        self.assertEqual(self.window.plan_name.get_text(), 'Mediatheque')
+        self.assertEqual(self.window.plan_path.get_text(), '/srv/partages/medias')
+        self.assertEqual(self.window.plan_users.get_text(), '')
+        self.assertEqual(self.window.plan_groups.get_text(), '')
+        self.assertFalse(self.window.plan_writable.get_active())
+        self.assertIsNone(self.window.plan_session.current)
+        self.assertEqual(self.window.plan_session.source, source)
+        self.window.preview_share_plan(None)
+        self.assertIsNone(self.window.plan_session.current)
+        self.window.plan_groups.set_text('famille')
+        self.window.preview_share_plan(None)
+        self.assertFalse(self.window.plan_session.current.can_apply)
+
+    def test_share_profile_retains_entered_fields_and_invalidates_old_plan(self):
+        self.window.open_share_plan('create')
+        self.window.plan_name.set_text('Travail')
+        self.window.plan_path.set_text('/srv/travail')
+        self.window.plan_users.set_text('alex')
+        self.window.preview_share_plan(None)
+        self.assertIsNotNone(self.window.plan_session.current)
+        self.window.share_profile.set_selected(1)
+        self.assertIsNone(self.window.plan_session.current)
+        self.window.fill_share_profile()
+        self.assertEqual(self.window.plan_name.get_text(), 'Travail')
+        self.assertEqual(self.window.plan_path.get_text(), '/srv/travail')
+        self.assertEqual(self.window.plan_users.get_text(), 'alex')
+        self.assertTrue(self.window.plan_writable.get_active())
+        self.assertFalse(self.window.plan_browseable.get_active())
+        self.assertFalse(self.window.validation_button.get_sensitive())
+
+    def test_share_profiles_are_disabled_for_existing_share_changes(self):
+        for action in ('update', 'remove'):
+            with self.subTest(action=action):
+                self.window.open_share_plan(action, 'Medias')
+                before = (self.window.plan_name.get_text(), self.window.plan_path.get_text(), self.window.plan_users.get_text())
+                self.assertFalse(self.window.share_profile.get_sensitive())
+                self.window.share_profile.set_selected(1)
+                self.window.fill_share_profile()
+                self.assertEqual((self.window.plan_name.get_text(), self.window.plan_path.get_text(), self.window.plan_users.get_text()), before)
+                self.assertFalse(self.window.profile_fill.get_sensitive())
+
+    def test_connection_sheet_demo_and_edit_invalidation_use_no_host(self):
+        from unittest.mock import Mock, patch
+        with patch('subprocess.run', side_effect=AssertionError('process')), \
+                patch('socket.getaddrinfo', side_effect=AssertionError('DNS')):
+            self.window.open_connection('Famille')
+            sheet = self.window.connection_window
+            self.addCleanup(sheet.destroy)
+            self.assertIsNone(sheet.card)
+            sheet.server.set_text('nas.local')
+            sheet.generate()
+            self.assertEqual(sheet.card.guides[1].address, 'smb://nas.local/Famille')
+            clipboard = Mock()
+            with patch('sambapilot.gtk_connection.ConnectionWindow.get_clipboard', return_value=clipboard):
+                sheet.copy_address('macos')
+                clipboard.set.assert_called_once_with('smb://nas.local/Famille')
+                sheet.server.set_text('autre.local')
+                self.assertIsNone(sheet.card)
+                self.assertFalse(sheet.copy_buttons['macos'].get_sensitive())
+                clipboard.reset_mock()
+                sheet.copy_address('macos')
+                clipboard.set.assert_not_called()
+
+    def test_connection_sheet_refuses_bad_server_and_closes_on_source_change(self):
+        self.window.open_connection('Famille')
+        sheet = self.window.connection_window
+        self.addCleanup(sheet.destroy)
+        sheet.server.set_text('nas.local')
+        sheet.generate()
+        self.assertIsNotNone(sheet.card)
+        sheet.server.set_text('smb://user:private-secret@nas/Famille')
+        sheet.generate()
+        self.assertIsNone(sheet.card)
+        self.assertNotIn('private-secret', sheet.status.get_text())
+        self.window.show_demo_shares()
+        self.assertFalse(sheet.active)
+        self.assertIsNone(self.window.connection_window)
+
+    def test_connection_sheet_file_retains_read_date_and_is_invalidated_on_clear(self):
+        from pathlib import Path
+        import tempfile
+        from sambapilot.inspection import read_configuration
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'smb.conf'
+            path.write_text('[Docs]\npath = /srv/docs\n', encoding='utf-8')
+            snapshot = read_configuration(str(path))
+            self.window.file_shares_mode = True
+            self.window.receive_inspection(self.window.inspection_generation, snapshot.inspect(), snapshot=snapshot)
+            self.window.open_connection('Docs')
+            sheet = self.window.connection_window
+            self.addCleanup(sheet.destroy)
+            sheet.server.set_text('192.0.2.10')
+            sheet.generate()
+            self.assertEqual(sheet.card.mode, 'file')
+            self.assertEqual(sheet.card.read_at, snapshot.read_at)
+            self.assertEqual(sheet.card.source_sha256, snapshot.sha256)
+            self.window.clear_inspection()
+            self.assertFalse(sheet.active)
+            self.assertIsNone(self.window.connection_window)
+
     def test_dashboard_demo_profiles_do_not_consult_host(self):
         from unittest.mock import patch
         page = self.window.diagnostic_page

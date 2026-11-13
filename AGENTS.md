@@ -57,6 +57,8 @@ Les tests GTK sont ignorés par défaut. Leur activation, avec des dépendances 
 - Garder les informations inconnues explicites (`None`/`null`), distinctes d’un refus. Distinguer règles Samba, permissions de fichiers et accès réseau réel.
 - Pour les sondes, conserver les listes fermées de programmes, arguments et unités, `shell=False`, les délais et l’absence de `sudo` ou de saisie interactive.
 - Le tableau de bord démarre sur des exemples. Son constat local exige un clic explicite ; changer d’exemple ou fermer la fenêtre invalide les résultats en attente. Le dépannage réutilise le constat sans lancer de sonde supplémentaire.
+- L’examen des volumes exige un dossier et un point attendu explicites. Aucun montage/démontage, lecture de fstab ou activation de partage ; ne pas assimiler un dossier présent à un disque identifié. Les sondes réelles restent séparées des exemples et des fixtures temporaires de CI.
+- La fiche par partage ne consulte pas l’hôte à l’ouverture. Un fichier peut provenir d’un autre serveur : exiger une confirmation explicite du dossier local et du point attendu, vérifier la source avant/après la consultation et ne pas attribuer ce constat local au serveur distant saisi. Les droits effectifs restent inconnus.
 - Ne lancer `testparm` que sur demande explicite, sur une copie temporaire privée et dans le périmètre reconnu. Une acceptation ne rend pas le plan applicable.
 - Ne pas ajouter de secrets, de configurations personnelles, de sauvegardes réelles ou de mots de passe dans le dépôt, les journaux ou les arguments de processus.
 - Préserver les modifications déjà présentes dans l’arbre de travail ; ne pas annuler une réorganisation ou des changements de l’utilisateur.

@@ -62,6 +62,15 @@ def troubleshoot(report: Report, symptom: str) -> TroubleshootingReport:
     findings.append(Finding("configuration", "attention" if config.status == "missing" else "observed" if config.status == "present" else "unknown",
                             "Configuration Samba : " + config.detail,
                             "Choisir explicitement le fichier dans l’examen de configuration ; son contenu n’a pas été lu par ce diagnostic."))
+    findings.extend(symptom_findings(symptom))
+    return TroubleshootingReport(1, report.mode, symptom, report, tuple(findings))
+
+
+def symptom_findings(symptom: str) -> Tuple[Finding, ...]:
+    """Pistes communes, sans prétendre qu'une sonde a été exécutée."""
+    if symptom not in SYMPTOMS:
+        raise ValueError("Symptôme inconnu.")
+    findings = []
     if symptom == "invisible":
         findings.append(Finding("discovery", "unknown", "Découverte réseau et visibilité du partage non vérifiées.",
                                 "Essayer une connexion directe avec une adresse de serveur connue, puis examiner le nom du partage et le réglage browseable dans le fichier choisi."))
@@ -75,7 +84,7 @@ def troubleshoot(report: Report, symptom: str) -> TroubleshootingReport:
                             "Vérifier le chemin réseau depuis un appareil client autorisé et examiner les restrictions existantes ; aucun port n’est ouvert par cet assistant."))
     findings.append(Finding("security", "unknown", "Contrôles SELinux/AppArmor non examinés.",
                             "Examiner les refus et les politiques applicables si les autres contrôles ne suffisent pas ; ne pas désactiver ces protections pour contourner un refus."))
-    return TroubleshootingReport(1, report.mode, symptom, report, tuple(findings))
+    return tuple(findings)
 
 
 def format_troubleshooting(report: TroubleshootingReport) -> str:

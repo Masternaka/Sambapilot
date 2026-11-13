@@ -10,7 +10,7 @@ from .demo import DemoProbe, SCENARIOS, access_demo, demo_configuration
 from .planning import ACTIONS, PlanError, ShareDraft, format_plan, prepare_plan
 from .diagnostic import Report, collect
 from .system import HostProbe
-from .inspection import InspectionError, format_inspection, inspect_file
+from .inspection import InspectionError, format_inspection, inspect_content, inspect_file
 from .file_planning import FilePlanSession
 from .report_export import ReportExportError, prepare_report, save_report
 from .validation import format_validation, validate_plan
@@ -18,6 +18,11 @@ from .setup import DemoSetupProbe, HostSetupProbe, collect_installation_plan, fo
 from .firewall import MANAGERS, FirewallIntent, FirewallPlanError, format_firewall, prepare_firewall
 from .distributions import PROFILES
 from .troubleshooting import SYMPTOMS, format_troubleshooting, troubleshoot
+from .connection import ConnectionError, format_connection, prepare_connection, validate_server
+from .share_profiles import SHARE_PROFILES, draft_from_profile
+from .volumes import DemoVolumeProbe, VOLUME_SCENARIOS, VolumeError, collect_volume, format_volume
+from .volume_system import HostVolumeProbe
+from .share_diagnostic import ShareDiagnosticError, format_share_diagnostic, prepare_share_diagnostic
 
 
 STATUS = {"present": "présent", "missing": "absent", "unknown": "inconnu",
@@ -106,6 +111,32 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     help_command.add_argument("--symptom", choices=tuple(SYMPTOMS), required=True)
     help_command.add_argument("--distribution", choices=tuple(PROFILES), help="Distribution fictive, uniquement avec --demo.")
     help_command.add_argument("--json", action="store_true")
+    connection = subcommands.add_parser("fiche-connexion", help="Préparer les adresses et les instructions client sans connexion réseau.")
+    connection_source = connection.add_mutually_exclusive_group(required=True)
+    connection_source.add_argument("--demo", action="store_true", help="Partages fictifs uniquement.")
+    connection_source.add_argument("--config", help="Fichier choisi, lu uniquement pour ses déclarations.")
+    connection.add_argument("--share", required=True, help="Nom d’un partage présent dans la source choisie.")
+    connection.add_argument("--server", required=True, help="Nom DNS ou IPv4 du serveur, sans URL ni identifiants.")
+    connection.add_argument("--json", action="store_true", help="Fiche structurée ; accès réseau inconnu et can_apply faux.")
+    share_diagnostic = subcommands.add_parser('diagnostic-partage', help='Regrouper les réglages, incertitudes, connexion et dépannage d’un partage.')
+    share_source = share_diagnostic.add_mutually_exclusive_group(required=True)
+    share_source.add_argument('--demo', action='store_true', help='Inventaire fictif, sans consultation de l’hôte.')
+    share_source.add_argument('--config', help='Configuration choisie explicitement.')
+    share_diagnostic.add_argument('--share', required=True)
+    share_diagnostic.add_argument('--symptom', choices=tuple(SYMPTOMS), default='invisible')
+    share_diagnostic.add_argument('--server', help='Nom DNS ou IPv4 fourni explicitement ; aucune connexion.')
+    share_volume = share_diagnostic.add_mutually_exclusive_group()
+    share_volume.add_argument('--demo-volume', choices=VOLUME_SCENARIOS, help='Exemple de volume, uniquement avec --demo.')
+    share_volume.add_argument('--local-volume', action='store_true', help='Confirmer que le dossier du fichier appartient à cet ordinateur et demander son constat Linux.')
+    share_diagnostic.add_argument('--mountpoint', help='Point de montage attendu, obligatoire pour examiner le volume.')
+    share_diagnostic.add_argument('--json', action='store_true')
+    volume = subcommands.add_parser("examiner-volume", help="Examiner le montage attendu d’un dossier, sans le monter ni activer de partage.")
+    volume_source = volume.add_mutually_exclusive_group(required=True)
+    volume_source.add_argument("--demo", nargs="?", const="mounted", choices=VOLUME_SCENARIOS, help="Constat fictif sans consultation de l’hôte.")
+    volume_source.add_argument("--local", action="store_true", help="Demander explicitement une lecture locale Linux.")
+    volume.add_argument("--path", required=True, help="Dossier Linux absolu choisi explicitement.")
+    volume.add_argument("--mountpoint", required=True, help="Point de montage attendu, distinct de / ; aucune détection implicite.")
+    volume.add_argument("--json", action="store_true", help="Constat structuré ; informations inconnues conservées en null.")
     permissions = subcommands.add_parser("permissions", help="Afficher la matrice des accès déclarés.")
     permissions.add_argument("--demo", action="store_true", required=True,
                              help="Données fictives uniquement ; collecte réelle non implémentée.")
@@ -118,12 +149,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     plan_source.add_argument("--demo", action="store_true", help="Configuration fictive.")
     plan_source.add_argument("--config", help="Fichier choisi : aperçu en mémoire, sans enregistrement.")
     plan.add_argument("--action", choices=ACTIONS, required=True)
-    plan.add_argument("--name", required=True, help="Nom du partage.")
+    plan.add_argument("--name", help="Nom du partage, obligatoire sauf création avec --profile.")
+    plan.add_argument("--profile", choices=tuple(profile.key for profile in SHARE_PROFILES),
+                      help="Préremplir une création : personal, family ou media ; comptes et groupes à choisir explicitement.")
     plan.add_argument("--path", help="Chemin Linux absolu du dossier.")
     plan.add_argument("--user", action="append", default=[], help="Utilisateur autorisé ; option répétable.")
     plan.add_argument("--group", action="append", default=[], help="Groupe autorisé ; option répétable, sans @.")
-    plan.add_argument("--writable", action="store_true", help="Proposer la lecture et l’écriture.")
-    plan.add_argument("--hidden", action="store_true", help="Masquer le partage dans la liste.")
+    plan_access = plan.add_mutually_exclusive_group()
+    plan_access.add_argument("--writable", action="store_true", default=None, help="Proposer la lecture et l’écriture.")
+    plan_access.add_argument("--read-only", dest="writable", action="store_false", help="Proposer la lecture seule, y compris avec un profil.")
+    plan_visibility = plan.add_mutually_exclusive_group()
+    plan_visibility.add_argument("--hidden", action="store_true", default=None, help="Masquer le partage dans la liste.")
+    plan_visibility.add_argument("--visible", dest="hidden", action="store_false", help="Afficher le partage, y compris avec un profil.")
     plan.add_argument("--json", action="store_true", help="Plan JSON avec configuration candidate et comparaison.")
     plan.add_argument("--validate", action="store_true", help="Contrôler explicitement une copie temporaire avec testparm déjà installé.")
     inspection = subcommands.add_parser("examiner-config", help="Lire un fichier explicitement choisi, sans le modifier.")
@@ -149,6 +186,48 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
     if getattr(args, "distribution", None) is not None and not args.demo:
         parser.error("--distribution choisit uniquement une distribution fictive avec --demo ; l’hôte est détecté automatiquement.")
+    if args.command == 'diagnostic-partage':
+        if args.demo_volume and not args.demo:
+            parser.error('--demo-volume exige --demo ; aucune simulation de volume ne sera jointe à un fichier réel.')
+        if args.local_volume and not args.config:
+            parser.error('--local-volume exige un fichier choisi ; ne pas consulter l’hôte depuis les exemples.')
+        if bool(args.mountpoint) != bool(args.demo_volume or args.local_volume):
+            parser.error('Fournir --mountpoint avec --demo-volume ou --local-volume, ensemble uniquement.')
+        try:
+            server = validate_server(args.server) if args.server is not None else None
+            source = (inspect_content(demo_configuration(), 'Exemple fictif en mémoire', 'demo')
+                      if args.demo else inspect_file(args.config))
+            result = prepare_share_diagnostic(source, args.share, args.symptom, server)
+            if args.demo_volume or args.local_volume:
+                if result.share.path is None:
+                    raise ShareDiagnosticError('Le chemin déclaré du partage est inconnu ; aucun volume ne peut être examiné.')
+                volume = collect_volume(result.share.path, args.mountpoint,
+                                         DemoVolumeProbe(args.demo_volume, args.mountpoint) if args.demo_volume else HostVolumeProbe())
+                if args.config and inspect_file(args.config).sha256 != source.sha256:
+                    raise ShareDiagnosticError('La configuration a changé pendant le constat ; recharger sa déclaration.')
+                result = prepare_share_diagnostic(source, args.share, args.symptom, server, volume)
+        except (InspectionError, ShareDiagnosticError, ConnectionError, VolumeError) as error:
+            parser.error(str(error))
+        print(json.dumps(result.to_dict(), ensure_ascii=True, indent=2) if args.json else format_share_diagnostic(result))
+        return 0
+    if args.command == "examiner-volume":
+        try:
+            report = collect_volume(args.path, args.mountpoint,
+                                    DemoVolumeProbe(args.demo, args.mountpoint) if args.demo else HostVolumeProbe())
+        except VolumeError as error:
+            parser.error(str(error))
+        print(json.dumps(report.to_dict(), ensure_ascii=True, indent=2) if args.json else format_volume(report))
+        return 0 if args.demo or report.basis_sha256 is not None else 2
+    if args.command == "fiche-connexion":
+        try:
+            server = validate_server(args.server)
+            report = (inspect_content(demo_configuration(), "Exemple fictif en mémoire", "demo")
+                      if args.demo else inspect_file(args.config))
+            card = prepare_connection(report, args.share, server)
+        except (ConnectionError, InspectionError) as error:
+            parser.error(str(error))
+        print(json.dumps(card.to_dict(), ensure_ascii=True, indent=2) if args.json else format_connection(card))
+        return 0
     if args.command == "depannage":
         report = collect(DemoProbe(args.demo, args.distribution or "arch") if args.demo else HostProbe())
         result = troubleshoot(report, args.symptom)
@@ -188,10 +267,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 2 if report.status == "blocked" else 0
     if args.command == "plan-partage":
         try:
+            if args.profile and args.action != "create":
+                raise PlanError("Les profils sont réservés aux créations ; examiner les réglages existants pour modifier ou retirer un partage.")
+            if not args.profile and not args.name:
+                raise PlanError("Indiquer --name ou choisir --profile pour une création.")
             if args.action == "remove":
-                if args.path is not None or args.user or args.group or args.writable or args.hidden:
+                if args.path is not None or args.user or args.group or args.writable is not None or args.hidden is not None:
                     raise PlanError("Le retrait accepte uniquement le nom, sans nouveaux réglages.")
                 draft = None
+            elif args.profile:
+                draft = draft_from_profile(args.profile, args.name or "", args.path or "", tuple(args.user), tuple(args.group),
+                                           None if args.writable is None else not args.writable,
+                                           None if args.hidden is None else not args.hidden)
+                args.name = draft.name
             else:
                 draft = ShareDraft(args.name, args.path or "", tuple(args.user), tuple(args.group),
                                    not args.writable, not args.hidden)
@@ -203,6 +291,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             parser.error(str(error))
         validation = validate_plan(proposal) if args.validate else None
         data = proposal.to_dict()
+        if args.profile:
+            data["profile"] = args.profile
         if validation is not None:
             data["validation"] = validation.to_dict()
         print(json.dumps(data, ensure_ascii=True, indent=2) if args.json else format_plan(proposal)

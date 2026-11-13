@@ -15,6 +15,10 @@ from .gtk_setup import InstallationPage
 from .gtk_firewall import FirewallPage
 from .gtk_report import ReportExportWindow
 from .gtk_diagnostic import DiagnosticPage
+from .gtk_connection import ConnectionWindow
+from .share_profiles import SHARE_PROFILES, profile_values
+from .gtk_volumes import VolumePage
+from .gtk_share_diagnostic import ShareDiagnosticWindow
 
 
 def label(text, style=None, selectable=False):
@@ -71,6 +75,8 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         self.inspection_generation = 0
         self.inspection_report = None
         self.report_export_window = None
+        self.connection_window = None
+        self.share_diagnostic_window = None
         self.inspection_snapshot = None
         self.config_share_names = ()
         self.file_shares_mode = False
@@ -152,6 +158,13 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
             self.mode_label.set_text("Aperçu réseau")
             self.banner_title.set_text("PÉRIMÈTRE DÉCLARÉ · Aucun port ouvert")
             self.banner_description.set_text("Intentions de règles uniquement ; aucune lecture ou modification du pare-feu système.")
+        elif self.stack.get_visible_child_name() == "maintenance":
+            self.set_title("SambaPilot — Examen des volumes")
+            self.mode_label.set_text('Lecture seule' if self.volume_page.source == 'live' else
+                                     'Démonstration' if self.volume_page.source == 'demo' else 'À examiner')
+            self.banner_title.set_text('CONSTAT LOCAL · Volume et dossier' if self.volume_page.source == 'live' else
+                                       'MODE DÉMONSTRATION · Volume fictif' if self.volume_page.source == 'demo' else 'CHEMINS CHOISIS · Constat à demander')
+            self.banner_description.set_text('Aucun montage, démontage ou partage activé. Les droits effectifs et l’identité du disque restent non vérifiés.')
         else:
             self.set_title("SambaPilot — Démonstration")
             self.mode_label.set_text("Démonstration")
@@ -206,6 +219,7 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         return content
 
     def clear_inspection(self, *_args):
+        self.invalidate_connection()
         self.invalidate_report_export()
         self.inspection_generation += 1
         self.inspection_report = None
@@ -254,6 +268,7 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
     def receive_inspection(self, generation, report, error=None, snapshot=None):
         if generation != self.inspection_generation:
             return False
+        self.invalidate_connection()
         self.invalidate_report_export()
         if error:
             self.inspection_report = None
@@ -285,6 +300,42 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         if self.report_export_window is not None:
             self.report_export_window.close()
             self.report_export_window = None
+
+    def invalidate_connection(self):
+        if self.share_diagnostic_window is not None:
+            if self.share_diagnostic_window.active:
+                self.share_diagnostic_window.close()
+            self.share_diagnostic_window = None
+        if self.connection_window is not None:
+            if self.connection_window.active:
+                self.connection_window.close()
+            self.connection_window = None
+
+    def open_connection(self, share_name):
+        self.invalidate_connection()
+        if self.file_shares_mode:
+            if self.inspection_snapshot is None:
+                return
+            report = self.inspection_snapshot.inspect()
+        else:
+            report = inspect_content(demo_configuration(), "Exemple fictif en mémoire", "demo")
+        if report.status != "inspected" or not any(share.name == share_name for share in report.shares):
+            return
+        self.connection_window = ConnectionWindow(self, report, share_name)
+        self.connection_window.present()
+
+    def open_share_diagnostic(self, share_name):
+        self.invalidate_connection()
+        if self.file_shares_mode:
+            if self.inspection_snapshot is None:
+                return
+            report = self.inspection_snapshot.inspect()
+        else:
+            report = inspect_content(demo_configuration(), 'Exemple fictif en mémoire', 'demo')
+        if report.status != 'inspected' or not any(share.name == share_name for share in report.shares):
+            return
+        self.share_diagnostic_window = ShareDiagnosticWindow(self, report, share_name)
+        self.share_diagnostic_window.present()
 
     def open_report_export(self, _button=None):
         if self.inspection_report is None:
@@ -324,12 +375,14 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
                                 inspect_content(demo_configuration(), "Exemple fictif en mémoire", "demo"))
 
     def invalidate_inspection_on_close(self, *_args):
+        self.invalidate_connection()
         self.invalidate_report_export()
         self.invalidate_source_reload()
         self.inspection_generation += 1
         self.validation_generation += 1
         self.installation_page.close()
         self.diagnostic_page.close()
+        self.volume_page.close()
         return False
 
     def dashboard_page(self):
@@ -434,6 +487,9 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
                 item.append(label(share.name, "heading"))
                 item.append(label(declared_share_details(share), selectable=True))
                 item.append(label(declared_share_guidance(share), selectable=True))
+                diagnostic = Gtk.Button(label='Diagnostic de ce partage…', halign=Gtk.Align.START)
+                diagnostic.connect('clicked', lambda _button, name=share.name: self.open_share_diagnostic(name))
+                item.append(diagnostic)
                 key = (snapshot.source, snapshot.sha256, share.name)
                 if key not in self.share_edit_blockers:
                     try:
@@ -453,6 +509,9 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
                 inspect = Gtk.Button(label="Voir le rapport et préparer un aperçu", halign=Gtk.Align.START)
                 inspect.connect("clicked", lambda _button, name=share.name: self.show_declared_share(name))
                 item.append(inspect)
+                connection = Gtk.Button(label="Préparer les adresses…", halign=Gtk.Align.START)
+                connection.connect("clicked", lambda _button, name=share.name: self.open_connection(name))
+                item.append(connection)
                 frame = Gtk.Frame()
                 frame.set_child(item)
                 self.shares_cards.append(frame)
@@ -485,11 +544,13 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         self.choose_configuration(button)
 
     def show_file_shares(self, _button=None):
+        self.invalidate_connection()
         self.file_shares_mode = True
         self.refresh_shares()
         self.stack.set_visible_child_name("shares")
 
     def show_demo_shares(self, _button=None):
+        self.invalidate_connection()
         self.file_shares_mode = False
         self.refresh_shares()
 
@@ -520,6 +581,9 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
             item.append(label(share, "heading"))
             item.append(label(rows[0].path, selectable=True))
             item.append(label(str(len(rows)) + " comptes dans la matrice d’exemple", "dim-label"))
+            diagnostic = Gtk.Button(label='Diagnostic de ce partage…', halign=Gtk.Align.START)
+            diagnostic.connect('clicked', lambda _button, name=share: self.open_share_diagnostic(name))
+            item.append(diagnostic)
             button = Gtk.Button(label="Voir les accès de ce partage", halign=Gtk.Align.START)
             button.connect("clicked", lambda _button, name=share: self.show_share(name))
             item.append(button)
@@ -531,6 +595,9 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
             actions.append(edit)
             actions.append(remove)
             item.append(actions)
+            connection = Gtk.Button(label="Préparer les adresses…", halign=Gtk.Align.START)
+            connection.connect("clicked", lambda _button, name=share: self.open_connection(name))
+            item.append(connection)
             frame.set_child(item)
             content.append(frame)
 
@@ -542,6 +609,18 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         content.append(self.plan_origin)
         self.plan_heading = label("Créer un partage", "heading")
         content.append(self.plan_heading)
+        profiles = box(horizontal=True)
+        self.share_profile = Gtk.DropDown.new_from_strings(['Saisie libre'] + [profile.title for profile in SHARE_PROFILES])
+        self.share_profile.set_tooltip_text('Préréglages pour une création ; aucune configuration appliquée')
+        self.share_profile.connect('notify::selected', self.share_profile_selected)
+        self.profile_fill = Gtk.Button(label='Préremplir ce profil')
+        self.profile_fill.set_sensitive(False)
+        self.profile_fill.connect('clicked', self.fill_share_profile)
+        profiles.append(self.share_profile)
+        profiles.append(self.profile_fill)
+        content.append(profiles)
+        self.profile_guidance = label('Profils facultatifs pour une création. Comptes et groupes à choisir explicitement.', 'dim-label')
+        content.append(self.profile_guidance)
         self.plan_name = Gtk.Entry()
         self.plan_path = Gtk.Entry(placeholder_text="/srv/partages/documents")
         self.plan_users = Gtk.Entry(placeholder_text="alex, lea")
@@ -605,6 +684,32 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         content.append(reload_scroll)
         return content
 
+    def share_profile_selected(self, *_args):
+        index = self.share_profile.get_selected()
+        selected = 1 <= index <= len(SHARE_PROFILES)
+        self.profile_fill.set_sensitive(self.share_action == 'create' and selected)
+        self.profile_guidance.set_text(SHARE_PROFILES[index - 1].guidance if selected else
+                                       'Saisie libre. Aucun préréglage ne remplace les champs sans votre demande.')
+        if not self.filling_form:
+            self.invalidate_plan()
+
+    def fill_share_profile(self, _button=None):
+        index = self.share_profile.get_selected()
+        if self.share_action != 'create' or not 1 <= index <= len(SHARE_PROFILES):
+            return
+        profile = profile_values(SHARE_PROFILES[index - 1].key, self.plan_name.get_text(), self.plan_path.get_text())
+        self.filling_form = True
+        try:
+            self.plan_name.set_text(profile.name)
+            self.plan_path.set_text(profile.path)
+            self.plan_writable.set_active(not profile.read_only)
+            self.plan_browseable.set_active(profile.browseable)
+        finally:
+            self.filling_form = False
+        self.invalidate_source_reload()
+        self.invalidate_plan()
+        self.plan_status.set_text('Profil prérempli : ' + profile.title + '. Vérifiez tous les champs, choisissez les identités puis générez l’aperçu. Aucun changement appliqué.')
+
     def invalidate_plan(self, *_args):
         if self.filling_form:
             return
@@ -632,6 +737,9 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         self.plan_session = session
         self.invalidate_source_reload()
         self.share_action = action
+        self.share_profile.set_selected(0)
+        self.share_profile.set_sensitive(action == 'create')
+        self.share_profile_selected()
         self.plan_origin.set_text("Source : " + (session.snapshot.source if session.mode == "file" else "configuration fictive"))
         self.plan_name.set_text(draft.name if draft else name)
         self.plan_name.set_editable(action == "create")
@@ -882,17 +990,10 @@ class SambaPilotWindow(Gtk.ApplicationWindow):
         return self.firewall_editor
 
     def maintenance_page(self):
-        content = page("Maintenance", "Diagnostic d’exemple et périmètre de cette première interface.")
-        for service in self.model.diagnostic.services:
-            content.append(card(service.name + " · exemple",
-                                "Chargement : " + service.load_state + " · Activité : " + service.active_state
-                                + " · Activation au démarrage : " + service.unit_file_state))
-        content.append(card("Sauvegarde et restauration · à venir",
-                            "Aucune sauvegarde de votre ordinateur n’a été créée par cette démonstration. "
-                            "Les futures interventions présenteront les changements avant confirmation."))
-        for note in self.model.diagnostic.notes:
-            content.append(label(note, "dim-label"))
-        return content
+        self.volume_page = VolumePage(self.update_mode_banner)
+        self.volume_page.append(label("Sauvegarde et restauration réelles : à développer. "
+                                      "Le laboratoire existant utilise uniquement des fichiers fictifs temporaires.", "dim-label"))
+        return self.volume_page
 
 
 class SambaPilotApplication(Gtk.Application):

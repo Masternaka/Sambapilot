@@ -29,7 +29,11 @@ Toutes les commandes se lancent depuis la racine du dépôt, à côté de `Makef
 
 | Fichiers | Rôle actuel |
 | --- | --- |
-| `sambapilot/__main__.py`, `cli.py` | Entrée du module et huit commandes terminal. |
+| `sambapilot/__main__.py`, `cli.py` | Entrée du module et onze commandes terminal. |
+| `share_diagnostic.py`, `gtk_share_diagnostic.py` | Fiche par déclaration, pistes communes, connexion et observations locales demandées explicitement. |
+| `volumes.py`, `volume_system.py`, `gtk_volumes.py` | Examen ponctuel des montages et métadonnées, sources explicites, exemples et aucun montage/partage activé. |
+| `connection.py`, `gtk_connection.py` | Fiches de connexion Windows/macOS/Linux, source explicite et copie demandée, sans accès réseau. |
+| `share_profiles.py` | Préréglages pour une création ; le moteur de planification conserve toutes les validations et comparaisons. |
 | `diagnostic.py`, `system.py`, `demo.py`, `distributions.py` | Rapports, sondes Linux, profils Arch/Debian/Fedora et données fictives. |
 | `troubleshooting.py`, `gtk_diagnostic.py` | Pistes de dépannage communes au terminal et au tableau de bord, sans réparation automatique. |
 | `access.py`, `presentation.py` | Estimation des accès déclarés et modèle de présentation sans GTK. |
@@ -84,6 +88,12 @@ Depuis le 13 novembre 2026, les trois profils sont implémentés. Le tableau de 
 Critère de validation : le diagnostic n’effectue aucune installation ni écriture système et explique les environnements non pris en charge.
 
 ### 2. Plans de configuration et partages
+
+Le [diagnostic par partage](../guides/diagnostic-partage.md) relie l’inventaire choisi aux incertitudes, au dépannage et aux adresses facultatives. Le volume est joint seulement sur demande, pour le même chemin et avec une portée compatible : exemples séparés du fichier réel. Le contrôle local d’un dossier issu d’un fichier exige la confirmation qu’il appartient à cet ordinateur, sans supposer qu’il décrit le serveur distant saisi. Les dates et empreintes sont conservées, et les modifications connues de source invalident les résultats.
+
+La [fiche de connexion](../guides/fiche-connexion.md) est disponible dans le terminal et sur les partages GTK. Son moteur pur construit des adresses depuis un inventaire et un serveur saisi ; aucun test réseau ou lancement de client n’est implémenté. Le rendu et la copie GTK restent à confirmer en CI et sur les bureaux cibles.
+
+Les [profils de partage](../guides/profils-partage.md) préremplissent les créations personnelles, familiales et médias. Les identités restent explicites, les champs modifiables et l’aperçu séparé. Aucun profil ne remplace les réglages d’une déclaration existante ni ne rend un plan applicable.
 
 État : le modèle des accès, la matrice en démonstration et la préparation des configurations candidates sont disponibles. Le formulaire GTK et le terminal utilisent le même moteur pour créer, modifier ou retirer une déclaration sur une configuration fictive, avec comparaison et invalidation des aperçus. La collecte réelle et l’application restent à développer. Le contrôle facultatif des candidats avec `testparm` est codé ; son exécution réelle reste à vérifier. Voir le [guide de préparation](../guides/preparation-partages.md).
 

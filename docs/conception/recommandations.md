@@ -50,7 +50,11 @@ Le réseau, le pare-feu, l’authentification réelle, les permissions de chaque
 
 ## Fonctions complémentaires
 
-Les profils de partage devront rester modifiables et ne jamais attribuer de droits sans aperçu. La protection des disques devra distinguer un répertoire existant d’un volume réellement monté. Les sessions sur fichier choisi vérifient déjà son empreinte avant chaque aperçu et avant/après un contrôle Samba. La surveillance continue et le blocage d’une future application fondée sur un état devenu obsolète restent à développer.
+L’[examen des volumes](../guides/examen-volumes.md) distingue désormais le point attendu, le montage parent ou imbriqué et les métadonnées du dossier lorsque la consultation locale est prise en charge. Il reste un diagnostic demandé explicitement : l’identité UUID du disque, sa surveillance et le blocage d’une future activation de partage restent à développer. Aucun volume n’est monté ou démonté par cette fonction.
+
+La [fiche de connexion par appareil](../guides/fiche-connexion.md) est désormais codée pour Windows, macOS et Linux, avec serveur saisi et adresses copiables dans GTK. Elle exploite les exemples ou un fichier choisi, sans établir de connexion. Les essais réels depuis les appareils clients restent à effectuer.
+
+Les [profils de partage](../guides/profils-partage.md) personnel, familial et médias en lecture seule sont codés pour les créations. Ils restent modifiables et ne proposent aucun compte ou groupe par défaut. Aucun droit n’est attribué ; l’aperçu utilise les validations ordinaires. Le profil de travail reste une personnalisation manuelle. La protection des disques devra distinguer un répertoire existant d’un volume réellement monté. Les sessions sur fichier choisi vérifient déjà son empreinte avant chaque aperçu et avant/après un contrôle Samba. La surveillance continue et le blocage d’une future application fondée sur un état devenu obsolète restent à développer.
 
 Le suivi des connexions pourra s’appuyer sur les informations de [smbstatus](https://www.samba.org/samba/docs/current/man-html/smbstatus.1.html). La corbeille pourra utiliser [vfs_recycle](https://www.samba.org/samba/docs/4.22/man-html/vfs_recycle.8.html), avec une gestion de l’espace et des droits de restauration ; elle ne remplace pas une sauvegarde. Le profil Apple et Time Machine devra respecter les contraintes de [vfs_fruit](https://www.samba.org/samba/docs/current/man-html/vfs_fruit.8.html).
 

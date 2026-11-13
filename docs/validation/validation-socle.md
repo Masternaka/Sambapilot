@@ -1,5 +1,55 @@
 # Bilan de validation de SambaPilot
 
+## Stabilisation — 13 novembre 2026
+
+Le dernier commit publié avant ce lot, `74754ba`, a une [CI réussie](https://github.com/Masternaka/Sambapilot/actions/runs/43435734134). Ce résultat ne couvre pas les nouvelles fiches, profils et volumes encore locaux au moment de cette vérification.
+
+La stabilisation ajoute un [parcours manuel court](recette-linux.md), harmonise les boutons « Préparer les adresses… » avec leur comportement sans connexion et répartit verticalement les commandes de volume de la fiche pour réduire la largeur nécessaire. Le rendu, le clavier et le presse-papiers restent à examiner sur une session Linux réelle.
+
+## Diagnostic par partage — 13 novembre 2026
+
+La [fiche par partage](../guides/diagnostic-partage.md) relie les déclarations du fichier choisi ou des exemples aux incertitudes, aux pistes communes de dépannage et aux adresses facultatives. Elle conserve la source, son empreinte et sa date. Aucun état du tableau de bord fictif n’est traité comme observation d’un fichier réel ; les droits effectifs et l’accès réseau restent inconnus.
+
+Le dossier et le volume sont examinés seulement sur demande. Les exemples restent séparés des constats locaux. Pour un fichier choisi, GTK exige la confirmation du dossier sur cet ordinateur ; le terminal exige `--local-volume`. Le constat porte sur le chemin déclaré, avec un point attendu explicite, sans le présenter comme état du serveur distant saisi. Une modification du fichier constatée avant/après la lecture locale invalide les résultats.
+
+`make test` traite **426 tests : 370 réussis et 56 natifs ignorés** (52 GTK et 4 Samba), sans erreur ni échec. Les 17 tests ordinaires ajoutés couvrent la sélection du partage, les réglages inconnus, les noms non portables, le refus d’adresses avec secrets, les volumes de chemin/portée incompatibles, la conservation de la source et l’absence de consultation locale implicite. La démonstration CLI avec connexion fictive et volume simulé absent a été exécutée sans accès hôte.
+
+Cinq tests GTK préparent l’ouverture sans sonde, la copie avec presse-papiers simulé, le volume fictif, l’exigence de confirmation locale, l’invalidation et le refus d’une source modifiée. Ils sont ignorés sur ce Mac. Le contrôle du paquet installé inclut la fiche fictive dans le terminal et GTK ; ses processus restent simulés dans la suite locale ordinaire.
+
+`make check` valide **61 fichiers Python** et les cibles locales des liens Markdown ; `git diff --check` réussit. Aucun GTK, presse-papiers réel, constat réel de volume ou contrôle de connexion lancé localement. Aucune installation, application de configuration, publication, création de commit ou push. Les nouveaux parcours natifs et le rendu restent à confirmer en CI et sur les cibles autorisées.
+
+## Examen des volumes — 13 novembre 2026
+
+La commande `examiner-volume` et la rubrique Maintenance distinguent les chemins choisis, le point attendu, le montage couvrant le dossier, les options de lecture seule et les métadonnées accessibles. La lecture locale est explicite et réservée à Linux ; les cinq scénarios fictifs ne consultent pas l’hôte. Aucun volume monté/démonté ni partage activé ; l’identité UUID et les droits restent inconnus. Voir le [guide des volumes](../guides/examen-volumes.md).
+
+`make test` traite **404 tests : 353 réussis et 51 ignorés** (47 GTK et 4 Samba), sans échec ni erreur. Les 22 tests ordinaires ajoutés couvrent les montages parents, imbriqués et empilés, les espaces échappés, les tables illisibles/malformées/trop grandes, les erreurs de métadonnées, le refus des liens et la relecture de table. Les scénarios de démonstration ont été exécutés localement sans lecture de table réelle ni lancement de processus. Le test des descripteurs simule `O_PATH` et les ouvertures sous macOS : il ne valide pas leur comportement Linux natif.
+
+Trois tests GTK préparent les exemples, l’invalidation après changement de chemin, le retour aux exemples et le refus de démarrer une lecture locale avec des chemins invalides. Ils sont ignorés sur ce Mac. Les contrôles du paquet installé ajoutent seulement les scénarios fictifs CLI/GTK ; les processus de ces contrôles restent simulés dans les tests ordinaires.
+
+Le contrôle de profil CI est étendu pour analyser `/proc/self/mountinfo` dans le conteneur et vérifier le lecteur Linux sur ses propres dossiers temporaires présents, absents et liés symboliquement. Il ne crée aucun point de montage. Ces contrôles réels ne sont pas exécutés pendant cette intervention et restent à confirmer en CI ; ils ne remplaceront pas un essai autorisé avec un vrai disque externe.
+
+`make check` valide **58 fichiers Python** et les cibles locales des liens Markdown ; `git diff --check` réussit. Aucun GTK ou contrôle de volume réel lancé localement, aucune installation ou configuration système modifiée, aucun commit ni push. Le rendu graphique, les courses avec de vrais montages et les permissions effectives restent non validés.
+
+## Profils de partage — 13 novembre 2026
+
+Les [profils de partage](../guides/profils-partage.md) personnel, familial et médias en lecture seule complètent les créations, dans le terminal et GTK. Ils suggèrent des noms, chemins et choix de droits/visibilité ; les comptes et groupes ne sont ni déduits ni créés. Les champs restent modifiables, l’accès invité est désactivé et la préparation conserve `can_apply: false`. La modification et le retrait d’une déclaration refusent les profils.
+
+`make test` traite **379 tests : 331 réussis et 48 natifs ignorés** (44 GTK et 4 Samba), sans erreur ni échec. Les 16 tests ordinaires ajoutés couvrent les défauts, les personnalisations, les identités absentes/invalides, les noms en conflit, le refus en modification/retrait avant lecture de fichier et la conservation des commentaires, BOM et fins de ligne. Un exemple CLI médias a été exécuté localement avec des données fictives ; aucun programme système ni réseau consulté.
+
+Trois tests GTK préparent le préremplissage sans identité ni aperçu automatique, la conservation des saisies et l’invalidation, puis la désactivation des profils pour les déclarations existantes. Ils sont ignorés sur ce Mac. Le contrôle du paquet installé inclut les trois profils CLI et un parcours GTK fictif demandant l’aperçu après saisie d’un groupe ; les tests ordinaires de ce contrôleur passent avec les processus simulés.
+
+`make check` valide **54 fichiers Python** et les cibles locales des liens Markdown ; `git diff --check` réussit. Aucun GTK lancé localement, aucune installation ou modification système, aucun contrôle `testparm` ni accès Samba effectué pour ce lot. Aucun commit/push ou lancement CI ; les nouvelles vérifications natives et le rendu restent à confirmer après publication.
+
+## Fiche de connexion — 13 novembre 2026
+
+La [fiche de connexion](../guides/fiche-connexion.md) est ajoutée dans le terminal et sur les partages GTK, avec serveur DNS/IPv4 saisi explicitement, adresses Windows/SMB et instructions Windows/macOS/Linux. Le moteur est indépendant de GTK et ne consulte ni l’hôte ni le réseau. Les données fictives, le fichier choisi, son empreinte et sa date de lecture restent distincts ; un accès non testé est `null`, pas un refus.
+
+`make test` traite **360 tests : 315 réussis et 45 ignorés** (41 GTK et 4 Samba), sans erreur ni échec. Les 17 tests ordinaires ajoutés couvrent les adresses, les espaces et accents, les serveurs et noms non pris en charge, les URL avec identifiants refusées sans reprise du secret dans l’erreur, les sources bloquées et la préservation du fichier/date de lecture. Ils vérifient aussi l’absence de consultation DNS, de fichier implicite ou de processus dans les exemples. La démonstration terminal a été exécutée localement avec `serveur.local`, sans connexion.
+
+Trois tests GTK préparent la génération, la copie avec presse-papiers simulé, l’invalidation après changement de serveur et la fermeture après changement de source. Ils sont ignorés sur ce Mac. Le contrôle du paquet installé inclut désormais la commande fictive et, avec `--gtk`, l’ouverture de la fiche puis son invalidation, sans copie ni accès réseau. Les tests ordinaires du contrôleur passent avec les appels de processus simulés.
+
+`make check` valide la syntaxe de **52 fichiers Python** et les cibles locales des liens Markdown ; `git diff --check` réussit. Aucun lancement de GTK, test de presse-papiers réel, installation ou connexion Samba effectué localement. Aucune exécution distante de ce lot, aucun commit ni push. Les essais natifs peuvent se faire en CI sans ordinateur Linux local ; le rendu et les connexions depuis les appareils clients restent à confirmer ultérieurement.
+
 ## Correction du contrôleur CI — 13 novembre 2026
 
 Le [run GitHub 43431525423](https://github.com/Masternaka/Sambapilot/actions/runs/43431525423), sur le commit `44fef000f640fadae94bdfe80299fbccc16dc9ea`, est examiné à partir du journal fourni et des trois artefacts de profils téléchargés en lecture seule. Les bilans `profile.json` d’Arch, Debian et Fedora indiquent chacun **338 tests réussis, aucun test ignoré, aucune erreur**, avec `native_required: true` (38 tests GTK et 4 Samba). La construction des archives, leur contrôle et l’installation du wheel réussissent également avant l’étape suivante.

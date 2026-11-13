@@ -12,7 +12,7 @@ Le diagnostic, la matrice des accès fictifs, l’examen d’un fichier choisi, 
 
 L’interface graphique permettra de consulter les partages et d’effectuer les opérations courantes avec des formulaires et des aperçus des changements.
 
-L’interface terminal donne accès au même moteur. Les huit commandes actuelles, dont le diagnostic et le dépannage en lecture seule, sont documentées dans le [README](../../README.md) ; les futures commandes d’application restent à définir. Les opérations modifiant la machine devront toujours demander une confirmation explicite ; aucun changement ne sera déclenché au démarrage.
+L’interface terminal donne accès au même moteur. Les onze commandes actuelles, dont le diagnostic par partage, le dépannage, la fiche de connexion et l’examen de volume en lecture seule, sont documentées dans le [README](../../README.md) ; les futures commandes d’application restent à définir. Les opérations modifiant la machine devront toujours demander une confirmation explicite ; aucun changement ne sera déclenché au démarrage.
 
 ## Installation et configuration initiale
 

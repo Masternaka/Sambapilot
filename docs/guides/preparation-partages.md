@@ -10,6 +10,8 @@ L’[examen d’un fichier choisi](inspection-configuration.md) peut servir de p
 
 ## Dans l’interface graphique
 
+Les [profils de partage](profils-partage.md) proposent des préréglages personnel, familial et médias en lecture seule, uniquement pour une création. Ils n’imposent aucune identité et ne déclenchent pas l’aperçu automatiquement. Le terminal propose les mêmes défauts avec `--profile`.
+
 Depuis la racine du dépôt, avec les dépendances graphiques déjà disponibles :
 
 ```sh

@@ -12,9 +12,13 @@ La version actuelle, **0.1.0.dev0**, permet de diagnostiquer et de préparer des
 | --- | --- | --- |
 | Diagnostic | Rapport en lecture seule dans le terminal et le tableau de bord GTK, profils Arch/Debian/Fedora, démonstrations et JSON. | Lecture locale sur demande, sans lecture de configuration ni test de connexion. |
 | Dépannage | Pistes adaptées à un partage invisible, un accès refusé ou une écriture impossible, en terminal et GTK. | Les causes non vérifiées restent explicites ; aucune réparation automatique. |
+| Diagnostic par partage | Fiche regroupant les déclarations, incertitudes, dépannage et adresses, avec volume facultatif sur demande. | Aucun droit effectif déduit ; le dossier local exige une confirmation de portée et un point attendu. |
+| Fiche de connexion | Adresses Windows et SMB avec instructions macOS/Linux, dans le terminal et depuis chaque partage GTK. | Serveur saisi explicitement ; aucune résolution DNS, authentification ou connexion effectuée. |
 | Utilisateurs et accès | Matrice fictive en terminal et GTK, filtres et explications des conflits. | Aucun compte, groupe ou ACL réel collecté ; les droits affichés sont des estimations. |
 | Examen de configuration | Inventaire d’un fichier explicitement choisi, en terminal et GTK, avec affichage de ses déclarations dans la page Partages. | Déclarations locales uniquement, sans héritage ni résolution des inclusions. |
 | Préparation des partages | Ajout, modification ou retrait d’une déclaration, candidat et comparaison en mémoire. | Configuration fictive ou fichier choisi ; périmètre prudent, sans enregistrement ni application. |
+| Profils de partage | Préréglages personnel, familial et médias pour une création, personnalisables en terminal et GTK. | Comptes et groupes à choisir explicitement ; aucun droit ni dossier créé. |
+| Examen des volumes | Comparaison d’un dossier et du point de montage attendu, exemples et constat local explicite dans Maintenance. | Identité du disque et permissions inconnues ; aucun montage, démontage ou partage activé. |
 | Rapport Markdown | Aperçu et enregistrement explicite de l’inventaire, depuis le terminal ou GTK. | Chemins et identifiants inclus et signalés ; pas de fichier brut ni de valeurs d’options inconnues ; aucun écrasement. |
 | Contrôle Samba | Option explicite `--validate` et bouton GTK utilisant une copie temporaire privée. | Linux avec `testparm` déjà installé ; configurations simples, exécution réelle encore à vérifier. |
 | Préparation d’installation | Plan descriptif fictif ou constat local, avec paquets et services propres à Arch, Debian ou Fedora. | Requêtes locales pacman, dpkg-query ou RPM ; aucune transaction calculée ni exécutée. |
@@ -34,12 +38,20 @@ python3 -B -m sambapilot --help
 python3 -B -m sambapilot diagnostic --demo
 python3 -B -m sambapilot diagnostic --demo --distribution debian
 python3 -B -m sambapilot depannage --demo --distribution fedora --symptom readonly
+python3 -B -m sambapilot fiche-connexion --demo --share Famille --server serveur.example.invalid
+python3 -B -m sambapilot diagnostic-partage --demo --share Famille --symptom readonly --server serveur.example.invalid
+python3 -B -m sambapilot plan-partage --demo --action create --profile media --group famille
+python3 -B -m sambapilot examiner-volume --demo unmounted --path /mnt/medias/films --mountpoint /mnt/medias
 python3 -B -m sambapilot permissions --demo
 ```
 
 Le dossier `sambapilot/` est le paquet Python : rester à la racine pour lancer ces commandes. Aucune installation du projet n’est nécessaire. L’option `-B` évite de créer des caches Python.
 
-Les scénarios `fresh`, `configured` et `restricted` sont fictifs et ne consultent pas la machine. `--demo` sans scénario choisit `configured` pour le diagnostic et le dépannage, et `fresh` pour la préparation d’installation. `--distribution arch|debian|fedora` choisit le profil fictif et exige `--demo`. Les sept commandes terminal de rapport ou de plan acceptent `--json`.
+Les scénarios `fresh`, `configured` et `restricted` sont fictifs et ne consultent pas la machine. `--demo` sans scénario choisit `configured` pour le diagnostic et le dépannage, et `fresh` pour la préparation d’installation. `--distribution arch|debian|fedora` choisit le profil fictif et exige `--demo`. Les dix commandes terminal de rapport, de fiche ou de plan acceptent `--json`. La [fiche de connexion](docs/guides/fiche-connexion.md) et le [diagnostic par partage](docs/guides/diagnostic-partage.md) peuvent être préparés sans Linux, GTK ni Samba.
+
+Les [profils de partage](docs/guides/profils-partage.md) complètent les créations avec `--profile personal|family|media`. Ils restent modifiables et exigent un compte ou un groupe explicite ; ils ne s’appliquent pas aux modifications et retraits.
+
+L’[examen des volumes](docs/guides/examen-volumes.md) propose cinq scénarios fictifs sans Linux. Sa lecture locale exige `--local`, le dossier et le point de montage attendu ; elle ne monte aucun volume et n’active aucun partage.
 
 ```sh
 python3 -B -m sambapilot diagnostic --demo restricted --json
@@ -85,6 +97,9 @@ Le [guide d’export Markdown](docs/guides/export-rapport.md) décrit l’aperç
 | --- | --- |
 | `diagnostic` | `0` : rapport Linux ou démonstration produit ; `2` : hors Linux ou arguments invalides. |
 | `depannage` | `0` : pistes produites ; `2` : hors Linux ou arguments invalides. Un code `0` ne certifie pas la cause. |
+| `fiche-connexion` | `0` : fiche produite sans connexion ; `2` : source, serveur ou partage refusé. |
+| `diagnostic-partage` | `0` : fiche produite, avec inconnues explicites ; `2` : arguments, source ou constat devenu obsolète refusés. |
+| `examiner-volume` | `0` : simulation ou table locale analysée, sans garantie de montage/droits ; `2` : arguments refusés, plateforme ou table indisponible/non concluante. |
 | `permissions` | `0` : matrice fictive produite ; `2` : arguments invalides, dont absence de `--demo`. |
 | `examiner-config` | `0` : inventaire produit, et export enregistré si demandé ; `2` : lecture impossible, structure bloquée, arguments invalides ou erreur d’export. |
 | `plan-partage` | `0` : aperçu produit, et contrôle accepté si demandé ; `2` : préparation impossible ; `4` : contrôle demandé non accepté ou indisponible. |
@@ -104,7 +119,7 @@ make check
 make demo
 ```
 
-Au **13 novembre 2026**, sur macOS après correction du contrôleur CI : **298 tests réussis et 42 tests natifs ignorés** (340 découverts : 38 GTK et 4 Samba ignorés). Le run GitHub précédent confirme les 338 tests de sa version, tous réussis sur Arch, Debian et Fedora, avant un échec du contrôleur de paquet installé. La correction attend un nouveau run. Les tests ordinaires locaux utilisent des sondes simulées et des fichiers temporaires ; ils ne nécessitent ni Samba, ni systemd, ni droits administrateur. Le [bilan actuel](docs/validation/validation-socle.md) précise les preuves et leurs limites.
+Au **13 novembre 2026**, sur macOS après ajout du diagnostic par partage : **370 tests réussis et 56 tests natifs ignorés** (426 découverts : 52 GTK et 4 Samba ignorés). Le run GitHub examiné précédemment confirme les 338 tests de sa version, tous réussis sur Arch, Debian et Fedora, avant un échec du contrôleur de paquet installé. La correction et les nouveaux lots attendent une confirmation en CI. Les tests ordinaires locaux utilisent des sondes simulées et des fichiers temporaires ; ils ne nécessitent ni Samba, ni systemd, ni droits administrateur. Le [bilan actuel](docs/validation/validation-socle.md) précise les preuves et leurs limites.
 
 Un workflow GitHub Actions prépare les vérifications Python, GTK4, Samba et distribution. Après chaque push et réussite des contrôles, il construit les archives Python puis le paquet Arch `.pkg.tar.zst` et les conserve comme artefacts pendant 30 jours. La version modifiée du workflow n’a pas été exécutée pendant cette intervention ; le conditionnement et les essais natifs restent à valider. Les essais Linux, pare-feu et connexion depuis un autre appareil restent également à effectuer. Voir le [bilan de validation](docs/validation/validation-socle.md).
 

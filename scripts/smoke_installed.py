@@ -37,7 +37,7 @@ def check_gtk(icons):
     if not Gtk.init_check():
         raise RuntimeError('Le contrôle GTK exige une session graphique accessible.')
     from gi.repository import Gdk
-    from sambapilot.gtk_app import SambaPilotApplication
+    from sambapilot.gtk_app import SambaPilotApplication, SambaPilotWindow
     from sambapilot.troubleshooting import SYMPTOMS
     application = SambaPilotApplication()
     try:
@@ -70,10 +70,63 @@ def check_gtk(icons):
         for name in ('dashboard', 'installation', 'shares', 'access', 'prepare', 'configuration', 'firewall', 'maintenance'):
             if window.stack.get_child_by_name(name) is None:
                 raise RuntimeError('Page GTK installée absente : ' + name)
+        window.open_connection('Famille')
+        try:
+            sheet = window.connection_window
+            if sheet is None:
+                raise RuntimeError('Fiche de connexion graphique installée absente.')
+            sheet.server.set_text('serveur.example.invalid')
+            sheet.generate()
+            if sheet.card is None or sheet.card.guides[1].address != 'smb://serveur.example.invalid/Famille':
+                raise RuntimeError('Adresse de connexion graphique installée incorrecte.')
+            sheet.server.set_text('autre.example.invalid')
+            if sheet.card is not None or sheet.copy_buttons['macos'].get_sensitive():
+                raise RuntimeError('La fiche de connexion doit être invalidée après modification.')
+        finally:
+            window.invalidate_connection()
+        window.open_share_diagnostic('Famille')
+        try:
+            sheet = window.share_diagnostic_window
+            if sheet is None or sheet.prepared.connection is not None or sheet.prepared.volume is not None:
+                raise RuntimeError('Le diagnostic de partage installé ne doit pas lancer de contrôle implicite.')
+            sheet.server.set_text('serveur.example.invalid')
+            sheet.mountpoint.set_text('/srv/partages')
+            sheet.volume_scenario.set_selected(1)
+            sheet.examine_demo()
+            if (sheet.prepared.connection is None or sheet.prepared.volume.expected_mounted is not False
+                    or sheet.prepared.effective_write is not None):
+                raise RuntimeError('Diagnostic de partage graphique installé incorrect.')
+            sheet.server.set_text('autre.example.invalid')
+            if sheet.prepared.volume is not None:
+                raise RuntimeError('Le constat joint doit être invalidé après modification du formulaire.')
+        finally:
+            window.invalidate_connection()
+        window.open_share_plan('create')
+        window.share_profile.set_selected(3)
+        window.fill_share_profile()
+        if (window.plan_name.get_text() != 'Mediatheque' or window.plan_users.get_text()
+                or window.plan_groups.get_text() or window.plan_session.current is not None):
+            raise RuntimeError('Préremplissage graphique du profil incorrect.')
+        window.plan_groups.set_text('famille')
+        window.preview_share_plan(None)
+        if window.plan_session.current is None or window.plan_session.current.can_apply:
+            raise RuntimeError('Le profil graphique doit produire uniquement un aperçu après choix des identités.')
+        volume_page = window.volume_page
+        volume_page.scenario.set_selected(1)
+        if volume_page.report is None or volume_page.report.expected_mounted is not False:
+            raise RuntimeError('Le scénario installé de volume absent est incorrect.')
+        volume_page.path.set_text('/mnt/medias/autre')
+        if volume_page.report is not None:
+            raise RuntimeError('Le constat de volume doit être invalidé après un changement de chemin.')
         print('GTK installé : fenêtre et huit pages créées, trois profils fictifs, dépannage et huit PNG décodés ; icône résolue.')
+        print('Fiche de connexion installée : génération fictive et invalidation contrôlées, sans copie ni accès réseau.')
+        print('Profil de partage installé : préremplissage sans identité, puis aperçu fictif après saisie explicite.')
+        print('Examen du volume installé : exemple de montage absent et invalidation, sans consultation locale.')
+        print('Diagnostic par partage installé : déclarations, adresses et volume fictif liés, sans consultation locale.')
     finally:
         for window in application.get_windows():
-            window.invalidate_inspection_on_close()
+            if isinstance(window, SambaPilotWindow):
+                window.invalidate_inspection_on_close()
             window.destroy()
         application.quit()
 
@@ -120,6 +173,26 @@ def main(argv=None):
             if help_report['can_apply'] is not False or help_report['mode'] != 'demo':
                 raise RuntimeError('Dépannage installé incorrect.')
         json.loads(command('permissions', '--demo', '--json'))
+        share_report = json.loads(command('diagnostic-partage', '--demo', '--share', 'Famille',
+                                           '--server', 'serveur.example.invalid', '--demo-volume', 'unmounted',
+                                           '--mountpoint', '/srv/partages', '--json'))
+        if (share_report['can_apply'] is not False or share_report['effective_write'] is not None
+                or share_report['share']['name'] != 'Famille' or share_report['volume']['expected_mounted'] is not False):
+            raise RuntimeError('Diagnostic de partage installé incorrect.')
+        volume_report = json.loads(command('examiner-volume', '--demo', 'unmounted', '--path', '/mnt/medias/films',
+                                           '--mountpoint', '/mnt/medias', '--json'))
+        if volume_report['expected_mounted'] is not False or volume_report['can_apply'] is not False:
+            raise RuntimeError('Examen de volume installé incorrect.')
+        for profile_key in ('personal', 'family', 'media'):
+            profile_plan = json.loads(command('plan-partage', '--demo', '--action', 'create',
+                                               '--profile', profile_key, '--user', 'alex', '--json'))
+            if profile_plan['can_apply'] is not False or profile_plan['profile'] != profile_key:
+                raise RuntimeError('Profil de partage installé incorrect.')
+        connection = json.loads(command('fiche-connexion', '--demo', '--share', 'Famille',
+                                         '--server', 'serveur.example.invalid', '--json'))
+        if (connection['can_apply'] is not False or connection['network_verified'] is not None
+                or connection['guides'][1]['address'] != 'smb://serveur.example.invalid/Famille'):
+            raise RuntimeError('Fiche de connexion installée incorrecte.')
         plan = json.loads(command('plan-partage', '--demo', '--action', 'remove', '--name', 'Medias', '--json'))
         if plan['can_apply'] is not False:
             raise RuntimeError('Le plan installé ne doit pas être applicable.')

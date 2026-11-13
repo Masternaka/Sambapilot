@@ -14,7 +14,10 @@ Les nouveaux documents sont ajoutés dans la rubrique correspondante et référe
 
 | Guide | Contenu |
 | --- | --- |
-| [Présentation et démarrage](../README.md) | État du projet, prérequis, huit commandes, exemples et codes de sortie. |
+| [Présentation et démarrage](../README.md) | État du projet, prérequis, onze commandes, exemples et codes de sortie. |
+| [Diagnostic par partage](guides/diagnostic-partage.md) | Déclarations et incertitudes, connexion, dépannage et constat de volume facultatif sur demande. |
+| [Examen des volumes](guides/examen-volumes.md) | Point attendu, volume parent, lecture seule et métadonnées du dossier, sans montage ni activation. |
+| [Fiche de connexion](guides/fiche-connexion.md) | Adresses Windows et SMB, instructions macOS/Linux, copie explicite et limites. |
 | [Compatibilité Linux](guides/compatibilite-linux.md) | Profils Arch, Debian et Fedora, paquets, services, schémas JSON et limites. |
 | [Diagnostic et dépannage](guides/diagnostic-depannage.md) | Tableau de bord local sur demande, exemples et pistes selon le symptôme. |
 | [Distribution Python et paquet Arch](guides/distribution-linux.md) | Artefacts après un push, paquet Arch et étapes vers un dépôt personnel pacman. |
@@ -22,6 +25,7 @@ Les nouveaux documents sont ajoutés dans la rubrique correspondante et référe
 | [Icône de l’application](guides/icones-application.md) | Dossier connecté, tailles PNG, ressources GTK et intégration au paquet Arch. |
 | [Examen de configuration](guides/inspection-configuration.md) | Lecture d’un fichier choisi, déclarations locales et refus prudents. |
 | [Préparation des partages](guides/preparation-partages.md) | Ajout, modification et retrait d’une déclaration, aperçu et comparaison. |
+| [Profils de partage](guides/profils-partage.md) | Préréglages personnel, familial et médias, personnalisables et réservés aux créations. |
 | [Simulation sauvegarde/restauration](guides/simulation-sauvegarde-restauration.md) | Laboratoire temporaire, intégrité des copies, aperçu et refus de restauration. |
 | [Export Markdown](guides/export-rapport.md) | Aperçu et enregistrement explicite de l’inventaire, informations incluses et refus d’écrasement. |
 | [Contrôle avec Samba](guides/validation-samba.md) | Demande explicite avec `testparm`, copie temporaire et interprétation du résultat. |

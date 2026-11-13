@@ -1,5 +1,7 @@
 # Diagnostic et assistant de dépannage
 
+Pour partir d’une déclaration précise, utiliser le [diagnostic par partage](diagnostic-partage.md). Il regroupe les réglages de cette déclaration et les mêmes pistes de symptôme, sans réutiliser les données fictives du tableau de bord comme constat d’un fichier réel.
+
 ## Examiner un constat
 
 Le tableau de bord GTK démarre avec un exemple fictif. Les menus choisissent Arch, Debian ou Fedora et l’un des scénarios sans Samba, déjà installé ou accès restreint. Changer un menu retourne immédiatement aux données fictives.

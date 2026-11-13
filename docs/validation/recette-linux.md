@@ -6,6 +6,22 @@ Cette recette est à répéter sur Arch Linux, Debian et Fedora, avec un ordinat
 
 Les écritures de travail ci-dessous concernent uniquement un dossier temporaire et les exports explicitement choisis. Les modifications de paquets, services, comptes, permissions, pare-feu, confiance des dépôts de paquets et configuration active restent hors de cette recette.
 
+## Parcours court pour le premier essai — environ dix minutes
+
+Attendre une CI verte sur **le même commit** que celui testé. Avec les dépendances déjà présentes, lancer depuis la racine :
+
+```sh
+python3 -B -m sambapilot gui --demo
+```
+
+1. Vérifier le logo, la lisibilité et la navigation au clavier. Réduire la fenêtre : les commandes et résultats doivent rester accessibles.
+2. Dans Partages, ouvrir « Diagnostic de ce partage… » sur Famille. Vérifier la source fictive, les droits inconnus et les trois symptômes.
+3. Saisir `serveur.example` pour préparer les adresses. Copier une adresse dans un éditeur, sans ouvrir de connexion ; effacer le serveur doit désactiver la copie.
+4. Indiquer le point `/srv/partages`, demander un volume fictif puis changer le point attendu : le constat précédent doit disparaître. Revenir aux exemples doit fermer la fiche.
+5. En création de partage, préremplir un profil, choisir explicitement les identités puis demander un aperçu. Vérifier que les valeurs déjà saisies sont conservées et qu'aucun changement n'est appliqué.
+
+Pour chaque étape, noter **Réussi**, **Échec** ou **Non exécuté**, avec le commit et une capture en cas de problème. Un parcours fictif réussi ne valide pas une connexion Samba. Les lectures de fichiers choisis, les contrôles locaux et les essais réseau seront des étapes séparées ; le parcours détaillé ci-dessous prépare les deux premières.
+
 ## Préparer le dossier de travail
 
 Depuis la racine du dépôt, conserver le commit examiné et préparer une copie fictive, sans lire `/etc/samba/smb.conf` :
@@ -51,6 +67,10 @@ python3 -B -m sambapilot gui --demo
 
 | Scénario | Résultat à observer |
 | --- | --- |
+| Diagnostic par partage | Depuis les exemples puis un fichier fictif, vérifier la source/date, les incertitudes, les adresses et le volume simulé réservé aux exemples. Modifier les champs puis recharger la source : aucun ancien constat ne doit revenir. Les sondes locales restent hors de cette recette sans demande explicite. |
+| Volumes | Dans Maintenance, consulter les cinq scénarios fictifs et vérifier l’invalidation des retours après changement de chemin/source. Les essais locaux sur un vrai disque seront demandés séparément, sans montage ou démontage implicite. |
+| Profils de partage | En création, préremplir les trois profils ; vérifier la conservation des saisies, l’absence d’identité ajoutée, les cases modifiables et l’aperçu demandé séparément. En modification/retrait, vérifier le menu désactivé. |
+| Fiche de connexion | Sur un exemple puis un fichier fictif : préparer les adresses, copier dans un éditeur sans ouvrir de connexion, modifier le serveur pour effacer l’aperçu, puis changer de source pour fermer la fiche. |
 | Diagnostic local et dépannage | Demander le constat local, vérifier la distribution et son service Samba attendu, essayer les trois symptômes puis revenir aux exemples ; aucune matrice fictive ne devient réelle. |
 | Démarrage | Fenêtre lisible dans la session Wayland ou X11 de la cible, bandeau fictif, navigation latérale, absence de demande de privilèges. |
 | Exemples et accès | Cartes de partages, filtres des accès et conflit expliqué ; la réinitialisation rétablit les exemples. |
